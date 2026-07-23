@@ -1,0 +1,183 @@
+      <button class="btn btn-primary" id="topApply" onclick="openApply()">Оставить заявку</button>
+    </div>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="kicker">Авторские экскурсии по Токио</div>
+      <h1>Найдите свой Токио.</h1>
+      <p>От храмов и старых кварталов до неона, аниме, рынков и панорам. Выберите настроение, длительность и формат - без необходимости изучать двадцать одинаково громких описаний.</p>
+    </div>
+    <div class="hero-card">
+      <strong>Не знаете, что выбрать?</strong>
+      <p>Для первого знакомства начните с «3D Токио» или полного классического дня. Для второго маршрута - Асакуса, гастрономия, Акихабара или вечерний Синдзюку.</p>
+      <button class="btn btn-primary" onclick="setFilter('first')">Показать лучшие для первого раза</button>
+      <div class="social-strip">
+        <a class="social-link" href="https://t.me/samuray_tours" target="_blank" rel="noopener">Telegram канал</a>
+        <a class="social-link" href="https://instagram.com/samuray_tours" target="_blank" rel="noopener">Instagram</a>
+        <a class="social-link" href="https://t.me/samuray_han" target="_blank" rel="noopener">Написать Райхану</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="filters-wrap" id="catalog">
+  <div class="wrap">
+    <div class="filters" id="filters"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-title">
+      <h2>Экскурсии</h2>
+      <span id="count"></span>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+</section>
+
+<section class="about">
+  <div class="wrap about-grid">
+    <div>
+      <div class="kicker">Как это работает</div>
+      <h2>Вы выбираете маршрут. Я подстраиваю его под вас.</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><b>1. Выберите экскурсию</b><span>Откройте подробности и оставьте заявку.</span></div>
+      <div class="step"><b>2. Укажите дату и состав группы</b><span>Я подтвержу доступность и уточню детали.</span></div>
+      <div class="step"><b>3. Встречаемся в Токио</b><span>Темп, остановки и акценты можно адаптировать по ходу прогулки.</span></div>
+      <div class="step"><b>Остаёмся на связи</b><span>Telegram и Instagram - для новых мест и идей. Для личного сообщения: @samuray_han. WhatsApp: @samuray_han.</span></div>
+      <div class="social-strip">
+        <a class="social-link" href="https://t.me/samuray_tours" target="_blank" rel="noopener">t.me/samuray_tours</a>
+        <a class="social-link" href="https://instagram.com/samuray_tours" target="_blank" rel="noopener">instagram.com/samuray_tours</a>
+        <a class="social-link" href="https://t.me/samuray_han" target="_blank" rel="noopener">@samuray_han</a>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">SamuRay Tours · частные экскурсии по Токио · Telegram / Instagram: @samuray_tours · Лично: @samuray_han · Заявки: raykhalit@icloud.com · цены указаны за группу до 4 человек, если не отмечено иное.</div>
+</footer>
+
+
+<div class="modal" id="applyModal" onclick="if(event.target===this)closeApply()">
+  <div class="form-shell">
+    <button class="modal-close" onclick="closeApply()">×</button>
+    <div id="applyFormWrap">
+      <div class="form-head">
+        <div class="selected-tour" id="selectedTourBadge">Выбранная экскурсия</div>
+        <h2>Заявка на экскурсию</h2>
+        <p>Оставьте главное. Я проверю дату, свяжусь с вами и уточню детали без превращения заявки в анкету на визу.</p>
+      </div>
+
+      <form id="tourApplication" onsubmit="submitApplication(event)">
+        <input type="hidden" name="tourId" id="tourId">
+        <input type="hidden" name="tourTitle" id="tourTitle">
+        <input type="hidden" name="tourPrice" id="tourPrice">
+        <input type="hidden" name="source" value="Каталог SamuRay Tours">
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="date">Желаемая дата *</label>
+            <input id="date" name="date" type="date" required>
+          </div>
+          <div class="field">
+            <label for="altDate">Альтернативная дата</label>
+            <input id="altDate" name="altDate" type="date">
+          </div>
+
+          <div class="field">
+            <label for="adults">Взрослые *</label>
+            <select id="adults" name="adults" required>
+              <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option>
+              <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+              <option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10+</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="children">Дети</label>
+            <select id="children" name="children">
+              <option value="0" selected>Нет</option><option value="1">1</option><option value="2">2</option>
+              <option value="3">3</option><option value="4">4+</option>
+            </select>
+          </div>
+
+          <div class="field full" id="childrenAgesField" style="display:none">
+            <label for="childrenAges">Возраст детей</label>
+            <input id="childrenAges" name="childrenAges" type="text" placeholder="Например: 9 и 13 лет">
+          </div>
+
+          <div class="field full">
+            <label for="hotel">Где вы остановились в Токио?</label>
+            <input id="hotel" name="hotel" type="text" placeholder="Отель или район, если уже известен">
+            <small>Поможет сразу понять логистику встречи.</small>
+          </div>
+
+          <div class="field full">
+            <label>Что вам особенно интересно?</label>
+            <div class="checks">
+              <label class="check-pill"><input type="checkbox" name="interests" value="История"><span>История</span></label>
+              <label class="check-pill"><input type="checkbox" name="interests" value="Традиции"><span>Традиции</span></label>
+              <label class="check-pill"><input type="checkbox" name="interests" value="Еда"><span>Еда</span></label>
+              <label class="check-pill"><input type="checkbox" name="interests" value="Современный Токио"><span>Современный Токио</span></label>
+              <label class="check-pill"><input type="checkbox" name="interests" value="Аниме и игры"><span>Аниме и игры</span></label>
+              <label class="check-pill"><input type="checkbox" name="interests" value="Архитектура"><span>Архитектура</span></label>
+              <label class="check-pill"><input type="checkbox" name="interests" value="Природа"><span>Природа</span></label>
+              <label class="check-pill"><input type="checkbox" name="interests" value="Фото"><span>Фото</span></label>
+              <label class="check-pill"><input type="checkbox" name="interests" value="Шопинг"><span>Шопинг</span></label>
+              <label class="check-pill"><input type="checkbox" name="interests" value="Ночная жизнь"><span>Ночная жизнь</span></label>
+            </div>
+          </div>
+
+          <div class="field full">
+            <label for="notes">Пожелания и важные нюансы</label>
+            <textarea id="notes" name="notes" placeholder="Что уже видели, что точно хочется или не хочется, ограничения по ходьбе, аллергии, особый повод и всё, что поможет сделать день вашим."></textarea>
+          </div>
+
+          <div class="field">
+            <label for="name">Ваше имя *</label>
+            <input id="name" name="name" type="text" autocomplete="name" required placeholder="Как к вам обращаться">
+          </div>
+          <div class="field">
+            <label for="contactType">Как удобнее связаться? *</label>
+            <select id="contactType" name="contactType" required>
+              <option value="Telegram">Telegram</option>
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Email">Email</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label for="contact">Ваш контакт *</label>
+            <input id="contact" name="contact" type="text" required placeholder="@username, номер телефона или email">
+          </div>
+        </div>
+
+        <div class="form-summary">
+          <div><small>Вы выбрали</small><b id="summaryTour">Экскурсия</b></div>
+          <div><small>Стоимость</small><b id="summaryPrice">-</b></div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" id="submitBtn" type="submit">Отправить заявку</button>
+          <span class="form-status" id="formStatus">Заявка ни к чему не обязывает. Сначала подтверждаем дату.</span>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+
