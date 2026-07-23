@@ -1,22 +1,4 @@
-       <a class="btn btn-secondary" target="_blank" rel="noopener" href="https://instagram.com/samuray_tours">Instagram</a>
-     </div>
-   </div>
-
-   <div class="modal-actions">
-    <button class="btn btn-primary" onclick="openApply('${t.id}')">Оставить заявку</button>
-    <button class="btn btn-secondary" onclick="closeModal()">Вернуться к каталогу</button>
-   </div>
-   <div class="note">Маршрут можно адаптировать под состав группы, интересы, темп, погоду и уже запланированные места.</div>`;
- document.getElementById("modal").classList.add("open");
- document.body.style.overflow="hidden";
-}
-function closeModal(){
- document.getElementById("modal").classList.remove("open");
- document.body.style.overflow="";
-}
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
-
-const APPLICATION_ENDPOINT="PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+const APPLICATION_ENDPOINT="https://script.google.com/macros/s/AKfycbztCYRPUfjdHesTP0hDl9WEwP_Uapj31sLkYH8mO89qvREswQ_5n5Ccv8rP2he66bPiHA/exec";
 let selectedTourForApply=null;
 
 function openApply(id){
@@ -54,29 +36,6 @@ async function submitApplication(e){
    data.tourTitle="Нужна помощь с выбором тура";
  }
 
- if(APPLICATION_ENDPOINT.includes("PASTE_YOUR")){
-   const subject=`Заявка SamuRay Tours: ${data.tourTitle} - ${data.date}`;
-   const guests=`${data.adults || "0"} взрослых, ${data.children || "0"} детей`;
-   const body=[
-     `Тур: ${data.tourTitle}`,
-     `Цена: ${data.tourPrice || "-"}`,
-     `Дата: ${data.date}`,
-     `Альтернативная дата: ${data.altDate || "-"}`,
-     `Гости: ${guests}`,
-     `Возраст детей: ${data.childrenAges || "-"}`,
-     `Отель / район: ${data.hotel || "-"}`,
-     `Интересы: ${(data.interests || []).join(", ") || "-"}`,
-     `Пожелания: ${data.notes || "-"}`,
-     `Имя: ${data.name}`,
-     `Связь: ${data.contactType}`,
-     `Контакт: ${data.contact}`
-   ].join("\n");
-   window.location.href=`mailto:raykhalit@icloud.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-   status.textContent="Заявка подготовлена в письме. Осталось нажать «Отправить» в почтовом приложении.";
-   status.style.color="#1f4037";
-   return;
- }
-
  btn.disabled=true;
  btn.textContent="Отправляю...";
  status.textContent="";
@@ -98,14 +57,31 @@ async function submitApplication(e){
        <button class="btn btn-primary" onclick="closeApply()">Вернуться к экскурсиям</button>
      </div>`;
  }catch(err){
-   status.textContent="Не получилось отправить. Напишите мне напрямую в Telegram: @samuray_han";
+   const guests=`${data.adults || "0"} взрослых, ${data.children || "0"} детей`;
+   const subject=`Заявка SamuRay Tours: ${data.tourTitle} - ${data.date}`;
+   const body=[
+     `Тур: ${data.tourTitle}`,
+     `Цена: ${data.tourPrice || "-"}`,
+     `Дата: ${data.date}`,
+     `Альтернативная дата: ${data.altDate || "-"}`,
+     `Гости: ${guests}`,
+     `Возраст детей: ${data.childrenAges || "-"}`,
+     `Отель / район: ${data.hotel || "-"}`,
+     `Интересы: ${(data.interests || []).join(", ") || "-"}`,
+     `Пожелания: ${data.notes || "-"}`,
+     `Имя: ${data.name}`,
+     `Связь: ${data.contactType}`,
+     `Контакт: ${data.contact}`
+   ].join("\n");
+   window.location.href=`mailto:raykhalit@icloud.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+   status.textContent="Не получилось отправить автоматически, поэтому открылось письмо с заявкой.";
    status.style.color="#a3212a";
    btn.disabled=false;
    btn.textContent="Отправить заявку";
  }
 }
 function escapeHtml(s){
- return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+ return String(s||"").replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 }
 
 renderFilters();renderTours();
