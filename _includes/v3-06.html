@@ -1,0 +1,97 @@
+       <a class="btn btn-secondary" target="_blank" rel="noopener" href="https://instagram.com/samuray_tours">Instagram</a>
+     </div>
+   </div>
+
+   <div class="modal-actions">
+    <button class="btn btn-primary" onclick="openApply('${t.id}')">Оставить заявку</button>
+    <button class="btn btn-secondary" onclick="closeModal()">Вернуться к каталогу</button>
+   </div>
+   <div class="note">Маршрут можно адаптировать под состав группы, интересы, темп, погоду и уже запланированные места.</div>`;
+ document.getElementById("modal").classList.add("open");
+ document.body.style.overflow="hidden";
+}
+function closeModal(){
+ document.getElementById("modal").classList.remove("open");
+ document.body.style.overflow="";
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
+
+const APPLICATION_ENDPOINT="PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+let selectedTourForApply=null;
+
+function openApply(id){
+ const t=id?tours.find(x=>x.id===id):null;
+ selectedTourForApply=t||null;
+ document.getElementById("tourId").value=t?t.id:"";
+ document.getElementById("tourTitle").value=t?t.title:"Не выбрано";
+ document.getElementById("tourPrice").value=t?t.price:"";
+ document.getElementById("selectedTourBadge").textContent=t?t.title:"Общая заявка";
+ document.getElementById("summaryTour").textContent=t?t.title:"Помогу подобрать маршрут";
+ document.getElementById("summaryPrice").textContent=t?t.price:"После выбора маршрута";
+ document.getElementById("applyModal").classList.add("open");
+ document.body.style.overflow="hidden";
+}
+function closeApply(){
+ document.getElementById("applyModal").classList.remove("open");
+ document.body.style.overflow="";
+}
+document.getElementById("children").addEventListener("change",e=>{
+ document.getElementById("childrenAgesField").style.display=e.target.value==="0"?"none":"flex";
+});
+
+async function submitApplication(e){
+ e.preventDefault();
+ const form=e.target;
+ const btn=document.getElementById("submitBtn");
+ const status=document.getElementById("formStatus");
+ const fd=new FormData(form);
+ const data=Object.fromEntries(fd.entries());
+ data.interests=[...form.querySelectorAll('input[name="interests"]:checked')].map(x=>x.value);
+ data.pageUrl=location.href;
+ data.submittedAt=new Date().toISOString();
+
+ if(!data.tourTitle || data.tourTitle==="Не выбрано"){
+   data.tourTitle="Нужна помощь с выбором тура";
+ }
+
+ if(APPLICATION_ENDPOINT.includes("PASTE_YOUR")){
+   status.textContent="Форма готова визуально. Для реальной отправки нужно вставить URL опубликованного Apps Script.";
+   status.style.color="#a3212a";
+   return;
+ }
+
+ btn.disabled=true;
+ btn.textContent="Отправляю...";
+ status.textContent="";
+
+ try{
+   const r=await fetch(APPLICATION_ENDPOINT,{
+     method:"POST",
+     headers:{"Content-Type":"text/plain;charset=utf-8"},
+     body:JSON.stringify(data)
+   });
+   const result=await r.json();
+   if(!result.ok) throw new Error(result.error||"Не удалось отправить заявку");
+
+   document.getElementById("applyFormWrap").innerHTML=`
+     <div class="success-box">
+       <div class="kicker">Заявка отправлена</div>
+       <h2>Спасибо, ${escapeHtml(data.name)}.</h2>
+       <p>Я получил заявку на «${escapeHtml(data.tourTitle)}». Проверю дату и свяжусь с вами по указанному контакту. Бронирование считается подтверждённым только после моего ответа.</p>
+       <button class="btn btn-primary" onclick="closeApply()">Вернуться к экскурсиям</button>
+     </div>`;
+ }catch(err){
+   status.textContent="Не получилось отправить. Напишите мне напрямую в Telegram: @samuray_han";
+   status.style.color="#a3212a";
+   btn.disabled=false;
+   btn.textContent="Отправить заявку";
+ }
+}
+function escapeHtml(s){
+ return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+
+renderFilters();renderTours();
+</script>
+</body>
+</html>
