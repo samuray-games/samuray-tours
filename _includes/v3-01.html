@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SamuRay Tours - авторские экскурсии по Токио</title>
+<meta name="description" content="Авторские прогулки и экскурсии по Токио с частным гидом Райханом. Выберите формат и оставьте заявку.">
+<style>
+:root{
+  --bg:#f5f1e8;
+  --paper:#fffdf8;
+  --ink:#171717;
+  --muted:#706b63;
+  --accent:#a3212a;
+  --accent2:#1f4037;
+  --line:#ddd6c9;
+  --chip:#ece5d8;
+  --shadow:0 12px 35px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+a{color:inherit;text-decoration:none}
+button{font:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+header{position:sticky;top:0;z-index:20;background:rgba(245,241,232,.92);backdrop-filter:blur(14px);border-bottom:1px solid rgba(0,0,0,.06)}
+.nav{height:68px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.brand{font-weight:900;letter-spacing:.02em;font-size:1.2rem}
+.brand span{color:var(--accent)}
+.nav-actions{display:flex;gap:10px;align-items:center}
+.btn{border:0;border-radius:999px;padding:12px 18px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:var(--accent);color:white}
+.btn-secondary{background:var(--paper);border:1px solid var(--line)}
+.hero{padding:72px 0 34px}
+.hero-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:36px;align-items:end}
+.kicker{font-size:.83rem;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:clamp(2.6rem,7vw,6.4rem);line-height:.94;margin:12px 0 20px;letter-spacing:-.055em}
+.hero p{font-size:1.12rem;color:var(--muted);max-width:700px}
+.hero-card{background:var(--accent2);color:white;border-radius:28px;padding:28px;box-shadow:var(--shadow)}
+.hero-card strong{font-size:1.4rem;display:block;margin-bottom:8px}
+.hero-card p{color:rgba(255,255,255,.75);margin:0 0 20px}
+.filters-wrap{padding:18px 0 26px;position:sticky;top:68px;z-index:10;background:linear-gradient(var(--bg) 75%,rgba(245,241,232,0))}
+.filters{display:flex;gap:10px;overflow:auto;padding-bottom:8px;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;border:1px solid var(--line);background:var(--paper);padding:10px 14px;border-radius:999px;font-weight:750;cursor:pointer}
+.chip.active{background:var(--ink);color:white;border-color:var(--ink)}
+.section-title{display:flex;justify-content:space-between;align-items:end;gap:18px;margin:24px 0 18px}
+.section-title h2{font-size:clamp(1.7rem,4vw,3rem);margin:0}
+.section-title span{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding-bottom:72px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:22px;display:flex;flex-direction:column;min-height:340px;box-shadow:0 3px 12px rgba(0,0,0,.025);transition:.2s ease}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.badges{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+.badge{font-size:.72rem;font-weight:850;padding:6px 9px;border-radius:999px;background:var(--chip)}
+.badge.hit{background:#efe0d2;color:#7e1e25}
+.card h3{font-size:1.42rem;line-height:1.12;margin:0 0 12px}
+.desc{color:var(--muted);margin:0 0 18px}
+.points{margin:0 0 20px;padding-left:18px;color:#37342f}
+.points li{margin:5px 0}
+.meta{display:flex;gap:12px;flex-wrap:wrap;font-size:.9rem;font-weight:800;margin-top:auto;padding-top:10px}
+.price{font-size:1.45rem;font-weight:950;margin:14px 0}
+.card-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.card-actions .btn{padding:11px 12px}
+.full{grid-column:1/-1}
+.empty{padding:40px;background:var(--paper);border:1px dashed var(--line);border-radius:22px;color:var(--muted);text-align:center}
+.about{background:var(--ink);color:white;padding:70px 0}
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+.about h2{font-size:clamp(2rem,5vw,4rem);margin:0}
+.about p{color:#c9c4bb}
+.steps{display:grid;gap:12px}
+.step{border-top:1px solid #424242;padding:14px 0}
+.step b{display:block;margin-bottom:4px}
+.footer{padding:34px 0 44px;color:var(--muted);font-size:.92rem}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:100;padding:20px;overflow:auto}
+.modal.open{display:flex;align-items:center;justify-content:center}
+.modal-box{background:var(--paper);max-width:760px;width:100%;border-radius:28px;padding:26px;box-shadow:0 25px 70px rgba(0,0,0,.28);position:relative}
+.modal-close{position:absolute;right:18px;top:18px;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:white;cursor:pointer;font-size:1.3rem}
+.modal h2{font-size:2rem;margin:8px 48px 12px 0}
+.modal .lead{color:var(--muted);font-size:1.05rem}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:22px 0}
+.info{background:#f0ebe2;border-radius:16px;padding:15px}
+.info small{display:block;color:var(--muted);font-weight:700;margin-bottom:4px}
+.modal-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.note{font-size:.82rem;color:var(--muted);margin-top:12px}
+@media(max-width:900px){
+ .hero-grid,.about-grid{grid-template-columns:1fr}
+ .grid{grid-template-columns:repeat(2,1fr)}
+ .hero{padding-top:46px}
+}
+@media(max-width:620px){
+ .wrap{padding:0 14px}
+ .nav{height:62px}
+ .nav .btn-secondary{display:none}
+ .filters-wrap{top:62px}
+ .grid{grid-template-columns:1fr}
+ .card{min-height:auto}
+ .hero-card{padding:22px}
+ .card-actions{grid-template-columns:1fr}
+ .modal-grid{grid-template-columns:1fr}
+ h1{font-size:3.25rem}
+}
+
+.social-strip{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.social-link{display:inline-flex;align-items:center;gap:7px;padding:10px 13px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);font-weight:800}
+.social-link.light{background:var(--paper);border-color:var(--line)}
+.detail-section{padding:18px 0;border-top:1px solid var(--line)}
+.detail-section h3{margin:0 0 10px;font-size:1.12rem}
+.detail-section p{margin:0;color:#403c36}
+.route-list{display:grid;gap:10px;margin:10px 0 0;padding:0;list-style:none}
+.route-list li{padding:12px 14px;border-radius:14px;background:#f0ebe2}
+.route-list b{display:block;margin-bottom:3px}
+.contact-box{margin-top:20px;padding:18px;border-radius:18px;background:#f0ebe2}
+.contact-box strong{display:block;margin-bottom:8px}
+.contact-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+
+.form-shell{max-width:860px;width:100%;background:var(--paper);border-radius:28px;padding:26px;box-shadow:0 25px 70px rgba(0,0,0,.28);position:relative}
+.form-head{padding-right:52px;margin-bottom:20px}
+.form-head .selected-tour{display:inline-flex;padding:7px 10px;border-radius:999px;background:#efe0d2;color:#7e1e25;font-size:.78rem;font-weight:900;margin-bottom:10px}
+.form-head h2{font-size:2rem;margin:0 0 8px}
+.form-head p{margin:0;color:var(--muted)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field{display:flex;flex-direction:column;gap:7px}
+.field.full{grid-column:1/-1}
+.field label{font-size:.9rem;font-weight:850}
+.field small{color:var(--muted);font-size:.78rem}
+.field input,.field select,.field textarea{
+ width:100%;border:1px solid var(--line);background:white;border-radius:14px;padding:13px 14px;font:inherit;color:var(--ink);outline:none
+}
+.field textarea{min-height:105px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#8e877d;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.check-pill{position:relative}
+.check-pill input{position:absolute;opacity:0;pointer-events:none}
+.check-pill span{display:inline-flex;padding:9px 12px;border-radius:999px;border:1px solid var(--line);background:white;font-weight:750;cursor:pointer}
+.check-pill input:checked+span{background:var(--ink);color:white;border-color:var(--ink)}
+.form-summary{margin:18px 0;padding:16px;border-radius:16px;background:#f0ebe2;display:grid;grid-template-columns:1fr auto;gap:10px}
+.form-summary b{display:block}
+.form-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.form-status{font-size:.9rem;color:var(--muted);min-height:20px}
+.success-box{padding:34px 10px;text-align:center}
+.success-box h2{font-size:2rem;margin:0 0 10px}
+.success-box p{color:var(--muted);max-width:560px;margin:0 auto 18px}
+@media(max-width:620px){.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.form-summary{grid-template-columns:1fr}}
+
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <div class="brand">SAMU<span>RAY</span> TOURS</div>
+    <div class="nav-actions">
+      <a class="btn btn-secondary" href="#catalog">Все экскурсии</a>
