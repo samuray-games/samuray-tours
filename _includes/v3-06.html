@@ -55,8 +55,25 @@ async function submitApplication(e){
  }
 
  if(APPLICATION_ENDPOINT.includes("PASTE_YOUR")){
-   status.textContent="Форма готова визуально. Для реальной отправки нужно вставить URL опубликованного Apps Script.";
-   status.style.color="#a3212a";
+   const subject=`Заявка SamuRay Tours: ${data.tourTitle} - ${data.date}`;
+   const guests=`${data.adults || "0"} взрослых, ${data.children || "0"} детей`;
+   const body=[
+     `Тур: ${data.tourTitle}`,
+     `Цена: ${data.tourPrice || "-"}`,
+     `Дата: ${data.date}`,
+     `Альтернативная дата: ${data.altDate || "-"}`,
+     `Гости: ${guests}`,
+     `Возраст детей: ${data.childrenAges || "-"}`,
+     `Отель / район: ${data.hotel || "-"}`,
+     `Интересы: ${(data.interests || []).join(", ") || "-"}`,
+     `Пожелания: ${data.notes || "-"}`,
+     `Имя: ${data.name}`,
+     `Связь: ${data.contactType}`,
+     `Контакт: ${data.contact}`
+   ].join("\n");
+   window.location.href=`mailto:raykhalit@icloud.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+   status.textContent="Заявка подготовлена в письме. Осталось нажать «Отправить» в почтовом приложении.";
+   status.style.color="#1f4037";
    return;
  }
 
