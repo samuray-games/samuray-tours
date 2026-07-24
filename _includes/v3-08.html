@@ -1,0 +1,148 @@
+<script>
+(function(){
+ var endpoint="https://script.google.com/macros/s/AKfycbztCYRPUfjdHesTP0hDl9WEwP_Uapj31sLkYH8mO89qvREswQ_5n5Ccv8rP2he66bPiHA/exec";
+ var tourMap={
+  "3d":["3D Токио","13 900 ₽"],
+  "asakusa":["Асакуса: из Эдо в Токио","12 900 ₽"],
+  "tsukiji":["Цукидзи + Гиндза","14 900 ₽"],
+  "akiba":["Акихабара + Амэёко","13 900 ₽"],
+  "yanaka":["Янака + Нэзу","13 900 ₽"],
+  "architecture":["Архитектурный центр Токио","13 900 ₽"],
+  "gardens":["Сады города","14 900 ₽"],
+  "depachika":["Депачика: гастрономический лабиринт","12 900 ₽"],
+  "season":["Сакура / Момидзи","23 900 ₽"],
+  "shinjuku":["Синдзюку: неон и Голден Гай","15 900 ₽"],
+  "classic":["Классический Токио за день","19 900 ₽"],
+  "contrast":["Современность & традиционность","23 900 ₽"],
+  "temples":["Сады и храмы Токио","23 900 ₽"],
+  "culinary":["Кулинарный Токио","25 900 ₽"],
+  "nightfull":["Ночной Токио","27 900 ₽"],
+  "express":["Токио Экспресс","24 900 ₽"],
+  "family":["Токио для семей с детьми","23 900 ₽"],
+  "imperial":["Классика + Императорские сады","23 900 ₽"],
+  "odaiba":["Одайба и Токийский залив","23 900 ₽"]
+ };
+
+ function esc(value){
+  return String(value||"").replace(/[&<>\"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c];});
+ }
+
+ function findAttrTarget(start,attr){
+  var node=start;
+  while(node && node!==document){
+   if(node.getAttribute && node.getAttribute(attr)!==null){return node;}
+   node=node.parentNode;
+  }
+  return null;
+ }
+
+ function openApplication(id){
+  var t=id && tourMap[id] ? tourMap[id] : null;
+  var modal=document.getElementById("applyModal");
+  if(!modal){return;}
+
+  var tourId=document.getElementById("tourId");
+  var tourTitle=document.getElementById("tourTitle");
+  var tourPrice=document.getElementById("tourPrice");
+  var badge=document.getElementById("selectedTourBadge");
+  var summary=document.getElementById("summaryTour");
+  var summaryPrice=document.getElementById("summaryPrice");
+
+  if(tourId){tourId.value=t?id:"";}
+  if(tourTitle){tourTitle.value=t?t[0]:"Нужна помощь с выбором тура";}
+  if(tourPrice){tourPrice.value=t?t[1]:"";}
+  if(badge){badge.textContent=t?t[0]:"Общая заявка";}
+  if(summary){summary.textContent=t?t[0]:"Помогу подобрать маршрут";}
+  if(summaryPrice){summaryPrice.textContent=t?t[1]:"После выбора маршрута";}
+
+  modal.scrollTop=0;
+  modal.classList.add("open");
+  document.body.style.overflow="hidden";
+ }
+
+ function collectForm(form){
+  var data={};
+  var fd=new FormData(form);
+  fd.forEach(function(value,key){
+   if(key!=="interests"){data[key]=value;}
+  });
+  data.interests=[];
+  var checks=form.querySelectorAll('input[name="interests"]:checked');
+  for(var i=0;i<checks.length;i++){data.interests.push(checks[i].value);}
+  data.pageUrl=location.href;
+  data.submittedAt=new Date().toISOString();
+  if(!data.tourTitle || data.tourTitle==="Не выбрано"){
+   data.tourTitle="Нужна помощь с выбором тура";
+  }
+  return data;
+ }
+
+ async function submitDirectApplication(event){
+  if(event){event.preventDefault();}
+  var form=event && event.target ? event.target : document.getElementById("tourApplication");
+  if(!form){return false;}
+
+  var btn=document.getElementById("submitBtn");
+  var status=document.getElementById("formStatus");
+  var data=collectForm(form);
+
+  if(btn){btn.disabled=true;btn.textContent="Отправляю...";}
+  if(status){status.textContent="Отправляю заявку...";status.style.color="";}
+
+  try{
+   var response=await fetch(endpoint,{
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify(data),
+    redirect:"follow"
+   });
+   var result=await response.json();
+   if(!result || !result.ok){throw new Error(result && result.error ? result.error : "Не удалось отправить заявку");}
+
+   var wrap=document.getElementById("applyFormWrap");
+   if(wrap){
+    wrap.innerHTML="<div class=\"success-box\"><div class=\"kicker\">Заявка отправлена</div><h2>Спасибо, "+esc(data.name)+".</h2><p>Заявка на «"+esc(data.tourTitle)+"» сохранена. Я проверю дату и свяжусь с вами по указанному контакту. Бронирование считается подтверждённым только после моего ответа.</p><button class=\"btn btn-primary\" type=\"button\" data-direct-close=\"1\">Вернуться к экскурсиям</button></div>";
+   }
+  }catch(error){
+   if(status){
+    status.innerHTML="Не удалось отправить автоматически. Проверьте связь и попробуйте ещё раз. Если ошибка повторится, напишите Райхану в Telegram: <a href=\"https://t.me/samuray_han\" target=\"_blank\" rel=\"noopener\">@samuray_han</a>.";
+    status.style.color="#a3212a";
+   }
+   if(btn){btn.disabled=false;btn.textContent="Отправить заявку";}
+  }
+  return false;
+ }
+
+ window.openApply=openApplication;
+ window.submitApplication=submitDirectApplication;
+
+ document.addEventListener("click",function(event){
+  var fallbackApply=findAttrTarget(event.target,"data-fallback-apply");
+  if(fallbackApply){
+   event.preventDefault();
+   event.stopPropagation();
+   if(event.stopImmediatePropagation){event.stopImmediatePropagation();}
+   openApplication(fallbackApply.getAttribute("data-fallback-apply"));
+   return;
+  }
+
+  var directClose=findAttrTarget(event.target,"data-direct-close");
+  if(directClose){
+   event.preventDefault();
+   var modal=document.getElementById("applyModal");
+   if(modal){modal.classList.remove("open");}
+   document.body.style.overflow="";
+  }
+ },true);
+
+ var form=document.getElementById("tourApplication");
+ if(form){
+  form.addEventListener("submit",function(event){
+   event.preventDefault();
+   event.stopPropagation();
+   if(event.stopImmediatePropagation){event.stopImmediatePropagation();}
+   submitDirectApplication(event);
+  },true);
+ }
+})();
+</script>
