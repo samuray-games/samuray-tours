@@ -147,11 +147,11 @@ function createNotionRecord_(p) {
 
   const relationCandidates = ['Маршрут', 'Маршруты', 'Экскурсия', 'Экскурсии'];
   const relationName = pickRelationName_(bookingSchema.properties || {}, relationCandidates);
-  if (relationName && isRelationProperty_(bookingSchema.properties || {}, relationName) && routeMap.title) {
-    const routePageId = findRoutePageId_(token, routesSourceId, routeMap.title, p.tourTitle);
-    if (routePageId) {
-      pageProperties[relationName] = { relation: [{ id: routePageId }] };
-    }
+  const routePage = relationName && isRelationProperty_(bookingSchema.properties || {}, relationName) && routeMap.title
+    ? findRoutePage_(token, routesSourceId, routeMap.title, p.tourTitle)
+    : null;
+  if (routePage && routePage.id) {
+    pageProperties[relationName] = { relation: [{ id: routePage.id }] };
   }
 
   const payload = {
@@ -171,18 +171,58 @@ function createNotionRecord_(p) {
   const txt = response.getContentText();
   if (code < 200 || code >= 300) throw new Error('Notion error ' + code + ': ' + txt);
   const obj = JSON.parse(txt);
-  return { ok: true, id: obj.id || null, url: obj.url || null, relationMatched: Boolean(pageProperties[relationName]) };
+  return {
+    ok: true,
+    id: obj.id || null,
+    url: obj.url || null,
+    relationMatched: Boolean(routePage && routePage.matched),
+    relationAmbiguous: Boolean(routePage && routePage.ambiguous),
+    matchedRouteTitle: routePage && routePage.title ? routePage.title : null,
+  };
 }
 
-function findRoutePageId_(token, routesSourceId, titlePropertyName, tourTitle) {
-  const body = {
+function findRoutePage_(token, routesSourceId, titlePropertyName, tourTitle) {
+  const queryTitle = safeText_(tourTitle);
+  if (!queryTitle) return null;
+
+  const exactMatches = notionQueryDataSource_(token, routesSourceId, {
     page_size: 25,
     filter: {
       property: titlePropertyName,
-      title: { equals: safeText_(tourTitle) }
+      title: { equals: queryTitle }
     }
-  };
-  const response = UrlFetchApp.fetch('https://api.notion.com/v1/data_sources/' + encodeURIComponent(String(routesSourceId).replace(/^collection:\/\//, '')) + '/query', {
+  });
+  if (exactMatches.length === 1) {
+    return { id: exactMatches[0].id, title: exactMatches[0].title, matched: true, ambiguous: false };
+  }
+
+  const normalizedQuery = normalizeRouteText_(queryTitle);
+  const allRoutes = notionQueryAllDataSourcePages_(token, routesSourceId);
+  const candidates = [];
+  for (var i = 0; i < allRoutes.length; i++) {
+    var route = allRoutes[i];
+    var routeTitle = normalizeRouteText_(route.title || '');
+    if (!routeTitle) continue;
+    if (routeTitle === normalizedQuery) {
+      candidates.push(route);
+      continue;
+    }
+    if (routeTitle.indexOf(normalizedQuery + ' ') === 0 || routeTitle.indexOf(normalizedQuery + '-') === 0 || routeTitle.indexOf(normalizedQuery + ' -') === 0) {
+      candidates.push(route);
+    }
+  }
+
+  if (candidates.length === 1) {
+    return { id: candidates[0].id, title: candidates[0].title, matched: true, ambiguous: false };
+  }
+  if (candidates.length > 1) {
+    return { id: null, title: null, matched: false, ambiguous: true };
+  }
+  return null;
+}
+
+function notionQueryDataSource_(token, dataSourceId, body) {
+  const response = UrlFetchApp.fetch('https://api.notion.com/v1/data_sources/' + encodeURIComponent(String(dataSourceId).replace(/^collection:\/\//, '')) + '/query', {
     method: 'post',
     contentType: 'application/json',
     headers: notionHeaders_(token),
@@ -190,10 +230,70 @@ function findRoutePageId_(token, routesSourceId, titlePropertyName, tourTitle) {
     muteHttpExceptions: true,
   });
   const code = response.getResponseCode();
-  if (code < 200 || code >= 300) return null;
+  if (code < 200 || code >= 300) return [];
   const obj = JSON.parse(response.getContentText() || '{}');
-  const first = (obj.results || [])[0];
-  return first ? first.id : null;
+  return extractNotionQueryResults_(obj);
+}
+
+function notionQueryAllDataSourcePages_(token, dataSourceId) {
+  var results = [];
+  var cursor = null;
+  var hasMore = true;
+  while (hasMore) {
+    var body = { page_size: 100 };
+    if (cursor) body.start_cursor = cursor;
+    var response = UrlFetchApp.fetch('https://api.notion.com/v1/data_sources/' + encodeURIComponent(String(dataSourceId).replace(/^collection:\/\//, '')) + '/query', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: notionHeaders_(token),
+      payload: JSON.stringify(body),
+      muteHttpExceptions: true,
+    });
+    var code = response.getResponseCode();
+    if (code < 200 || code >= 300) break;
+    var obj = JSON.parse(response.getContentText() || '{}');
+    var pageResults = extractNotionQueryResults_(obj);
+    for (var i = 0; i < pageResults.length; i++) results.push(pageResults[i]);
+    hasMore = Boolean(obj.has_more);
+    cursor = obj.next_cursor || null;
+    if (!hasMore || !cursor) break;
+  }
+  return results;
+}
+
+function extractNotionQueryResults_(obj) {
+  var out = [];
+  var results = obj && obj.results ? obj.results : [];
+  for (var i = 0; i < results.length; i++) {
+    var page = results[i] || {};
+    out.push({ id: page.id || null, title: extractNotionTitle_(page.properties || {}) });
+  }
+  return out;
+}
+
+function extractNotionTitle_(properties) {
+  var keys = Object.keys(properties || {});
+  for (var i = 0; i < keys.length; i++) {
+    var name = keys[i];
+    var schema = properties[name] || {};
+    if (schema.type === 'title') {
+      return extractPlainText_(schema.title || []);
+    }
+  }
+  return '';
+}
+
+function extractPlainText_(segments) {
+  var parts = [];
+  for (var i = 0; i < (segments || []).length; i++) {
+    var segment = segments[i] || {};
+    if (segment.plain_text) {
+      parts.push(String(segment.plain_text));
+    } else if (segment.text && segment.text.content) {
+      parts.push(String(segment.text.content));
+    }
+  }
+  return parts.join('').trim();
 }
 
 function notionGetDataSourceSchema_(token, dataSourceId) {
@@ -228,6 +328,15 @@ function pickRelationName_(properties, candidates) {
     if (isRelationProperty_(properties, candidate)) return candidate;
   }
   return null;
+}
+
+function normalizeRouteText_(value) {
+  return safeText_(value)
+    .toLowerCase()
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
+    .replace(/[\s\u00A0]+/g, ' ')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/^\s+|\s+$/g, '');
 }
 
 function setIf_(obj, key, value) {
