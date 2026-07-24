@@ -25,7 +25,7 @@ function doPost(e) {
       dedupeStore_(payload);
 
       try {
-        const emailResult = sendEmail_(payload);
+        const emailResult = sendEmail_(payload, notionResult);
         return jsonResponse_({ ok: true, email: emailResult, notion: notionResult });
       } catch (emailErr) {
         return jsonResponse_({
@@ -83,7 +83,7 @@ function dedupeCheck_(p) {
   return Boolean(CacheService.getScriptCache().get(dedupeKey_(p)));
 }
 
-function sendEmail_(p) {
+function sendEmail_(p, notionResult) {
   const adults = toInt_(p.adults);
   const children = toInt_(p.children);
   const guests = adults + children;
@@ -104,7 +104,8 @@ function sendEmail_(p) {
     'Связь: ' + safeText_(p.contactType),
     'Контакт: ' + safeText_(p.contact),
     'Источник: ' + SOURCE_LABEL,
-    'Страница: ' + safeText_(p.pageUrl || '-'),
+    'CRM Notion: ' + safeText_(notionResult && notionResult.url ? notionResult.url : '-'),
+    'Страница каталога: ' + safeText_(p.pageUrl || '-'),
     'Отправлено: ' + safeText_(p.submittedAt || new Date().toISOString())
   ].join('\n');
   MailApp.sendEmail({
@@ -125,7 +126,8 @@ function createNotionRecord_(p) {
 
   const bookingSchema = notionGetDataSourceSchema_(token, bookingSourceId);
   const routesSchema = notionGetDataSourceSchema_(token, routesSourceId);
-  const bookingMap = buildPropertyMap_(bookingSchema.properties || {});
+  const bookingProperties = bookingSchema.properties || {};
+  const bookingMap = buildPropertyMap_(bookingProperties);
   const routeMap = buildPropertyMap_(routesSchema.properties || {});
   const titleName = bookingMap.title || 'Бронирование';
   const pageProperties = {};
@@ -145,9 +147,17 @@ function createNotionRecord_(p) {
   setIf_(pageProperties, bookingMap['Дата заявки'], dateProp_(new Date().toISOString().slice(0, 10)));
   setIf_(pageProperties, bookingMap['Интересы'], richTextProp_((p.interests || []).join(', ')));
 
+  // Make website leads immediately visible in the normal operational CRM views.
+  setSchemaField_(pageProperties, bookingProperties, 'Статус', 'Ожидает оплаты');
+  setSchemaField_(pageProperties, bookingProperties, 'Оплата', 'Не согласована');
+  setSchemaField_(pageProperties, bookingProperties, 'Импорт требует внимания', true);
+  setSchemaField_(pageProperties, bookingProperties, 'Импорт проверен', false);
+  setSchemaField_(pageProperties, bookingProperties, 'Следующее действие', 'Связаться с клиентом по заявке из каталога');
+  setSchemaField_(pageProperties, bookingProperties, 'Групп', 1);
+
   const relationCandidates = ['Маршрут', 'Маршруты', 'Экскурсия', 'Экскурсии'];
-  const relationName = pickRelationName_(bookingSchema.properties || {}, relationCandidates);
-  const routePage = relationName && isRelationProperty_(bookingSchema.properties || {}, relationName) && routeMap.title
+  const relationName = pickRelationName_(bookingProperties, relationCandidates);
+  const routePage = relationName && isRelationProperty_(bookingProperties, relationName) && routeMap.title
     ? findRoutePage_(token, routesSourceId, routeMap.title, p.tourTitle)
     : null;
   if (routePage && routePage.id) {
@@ -341,6 +351,34 @@ function normalizeRouteText_(value) {
 
 function setIf_(obj, key, value) {
   if (key && value) obj[key] = value;
+}
+
+function setSchemaField_(obj, properties, name, value) {
+  const schema = properties && properties[name];
+  if (!schema) return;
+
+  if (schema.type === 'select') {
+    obj[name] = selectProp_(value);
+    return;
+  }
+  if (schema.type === 'status') {
+    const v = safeText_(value);
+    if (v) obj[name] = { status: { name: v } };
+    return;
+  }
+  if (schema.type === 'checkbox') {
+    obj[name] = { checkbox: Boolean(value) };
+    return;
+  }
+  if (schema.type === 'rich_text') {
+    const prop = richTextProp_(value);
+    if (prop) obj[name] = prop;
+    return;
+  }
+  if (schema.type === 'number') {
+    const n = Number(value);
+    if (Number.isFinite(n)) obj[name] = { number: n };
+  }
 }
 
 function notionHeaders_(token) {
