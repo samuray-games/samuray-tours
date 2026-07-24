@@ -86,5 +86,134 @@ function escapeHtml(s){
 
 renderFilters();renderTours();
 </script>
+
+<script>
+/* Resilient fallback for browsers that fail to execute the main catalog bundle. */
+(function(){
+ var grid=document.getElementById("grid");
+ if(!grid || grid.children.length){return;}
+
+ var fallbackTours=[
+  {id:"3d",title:"3D Токио",price:"13 900 ₽",duration:"3 часа",format:"3 часа",tags:["first","3h","modern","tradition","family"],desc:"Священный лес Мэйдзи, Харадзюку и энергия Сибуи.",points:["Мэйдзи Дзингу","Харадзюку и Cat Street","Сибуя и Хатико"]},
+  {id:"asakusa",title:"Асакуса: из Эдо в Токио",price:"12 900 ₽",duration:"3 часа",format:"3 часа",tags:["3h","tradition","food","family"],desc:"Старый город, буддийские традиции, уличная еда и виды на Tokyo Skytree.",points:["Каминаримон","Сэнсодзи","виды на Tokyo Skytree"]},
+  {id:"tsukiji",title:"Цукидзи + Гиндза",price:"14 900 ₽",duration:"3 часа",format:"3 часа",tags:["3h","food","modern"],desc:"От внешнего рынка Цукидзи до витрин и архитектуры Гиндзы.",points:["рынок Цукидзи","японские продукты и перекусы","Гиндза"]},
+  {id:"akiba",title:"Акихабара + Амэёко",price:"13 900 ₽",duration:"3 часа",format:"3 часа",tags:["3h","anime","modern","family"],desc:"Аниме, игры, электроника и живая торговая атмосфера Амэёко.",points:["Акихабара","магазины и игровые центры","Амэёко"]},
+  {id:"yanaka",title:"Янака + Нэзу",price:"13 900 ₽",duration:"3 часа",format:"3 часа",tags:["3h","tradition","quiet"],desc:"Низкоэтажный Токио, старые улочки, храмы и спокойный ритм.",points:["Янака","Нэзу","локальные улочки и святилища"]},
+  {id:"architecture",title:"Архитектурный центр Токио",price:"13 900 ₽",duration:"3 часа",format:"3 часа",tags:["3h","modern"],desc:"Современный Токио через здания, общественные пространства и городской дизайн.",points:["современная архитектура","городской дизайн","необычные пространства"]},
+  {id:"gardens",title:"Сады города",price:"14 900 ₽",duration:"3 часа",format:"3 часа",tags:["3h","quiet","tradition","season"],desc:"Японские сады, сезонная природа и пауза от мегаполиса.",points:["традиционный сад","сезонные пейзажи","японская эстетика"]},
+  {id:"depachika",title:"Депачика: гастрономический лабиринт",price:"12 900 ₽",duration:"3 часа",format:"3 часа",tags:["3h","food","modern"],desc:"Продуктовые этажи универмагов, сезонные сладости, бэнто и подарки.",points:["универмаги","дегустации и покупки","гастрономические привычки"]},
+  {id:"season",title:"Сакура / Момидзи",price:"23 900 ₽",duration:"индивидуально",format:"Сезонный",tags:["season","quiet","tradition"],desc:"Маршрут под актуальное цветение или осенние краски.",points:["лучшие точки сезона","сады и набережные","фотоостановки"]},
+  {id:"shinjuku",title:"Синдзюку: неон и Голден Гай",price:"15 900 ₽",duration:"около 3 часов",format:"Вечер",tags:["night","modern","food"],desc:"Ночной Токио, неон, послевоенная история и Голден Гай.",points:["Синдзюку","неоновые улицы","Голден Гай"]},
+  {id:"classic",title:"Классический Токио за день",price:"19 900 ₽",duration:"8 часов",format:"Полный день",tags:["full","first","tradition","modern","family"],desc:"Большой обзорный маршрут для первого знакомства с городом.",points:["традиционный Токио","Мэйдзи и Харадзюку","Сибуя и современные районы"]},
+  {id:"contrast",title:"Современность & традиционность",price:"23 900 ₽",duration:"8 часов",format:"Полный день",tags:["full","first","tradition","modern"],desc:"Храмы, старые районы, деловой центр и современный городской ритм.",points:["традиционные районы","современный центр","контрасты города"]},
+  {id:"temples",title:"Сады и храмы Токио",price:"23 900 ₽",duration:"8 часов",format:"Полный день",tags:["full","quiet","tradition"],desc:"Созерцательный день со святилищами, храмами и садами.",points:["храмы и святилища","японские сады","традиции и ритуалы"]},
+  {id:"culinary",title:"Кулинарный Токио",price:"25 900 ₽",duration:"8 часов",format:"Полный день",tags:["full","food"],desc:"Рынки, локальные блюда, депачика и гастрономические кварталы.",points:["рынок","локальные блюда","депачика"]},
+  {id:"nightfull",title:"Ночной Токио",price:"27 900 ₽",duration:"до 10 часов",format:"Полный день",tags:["night","full","modern"],desc:"Поздний старт и длинный маршрут до ночного города.",points:["вечерние районы","панорамы","неон и ночная жизнь"]},
+  {id:"express",title:"Токио Экспресс",price:"24 900 ₽",duration:"около 9 часов",format:"Полный день",tags:["full","first","modern","tradition"],desc:"Интенсивный маршрут для одного свободного дня в Токио.",points:["ключевые районы","быстрые переходы","главные контрасты"]},
+  {id:"family",title:"Токио для семей с детьми",price:"23 900 ₽",duration:"8 часов",format:"Полный день",tags:["full","family","tradition","modern"],desc:"Семейный день с гибким темпом, Асакусой и панорамами.",points:["семейные локации","Асакуса","Tokyo Skytree"]},
+  {id:"imperial",title:"Классика + Императорские сады",price:"23 900 ₽",duration:"8 часов",format:"Полный день",tags:["full","first","tradition"],desc:"Классические районы с акцентом на императорскую историю.",points:["Императорский дворец","центральный Токио","исторические контрасты"]},
+  {id:"odaiba",title:"Одайба и Токийский залив",price:"23 900 ₽",duration:"8 часов",format:"Полный день",tags:["full","modern","family"],desc:"Токийский залив, простор, футуристическая архитектура и развлечения.",points:["Одайба","Токийский залив","современная архитектура"]}
+ ];
+
+ var filterDefs=[["all","Все"],["first","Впервые в Токио"],["3h","3 часа"],["full","Весь день"],["family","С детьми"],["food","Еда"],["tradition","Традиции"],["modern","Современный Токио"],["night","Вечер"],["anime","Аниме"],["quiet","Спокойный Токио"],["season","Сезонный"]];
+ var activeFallback="all";
+
+ function escapeFallback(value){
+  return String(value||"").replace(/[&<>\"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c];});
+ }
+ function findTour(id){
+  for(var i=0;i<fallbackTours.length;i++){if(fallbackTours[i].id===id){return fallbackTours[i];}}
+  return null;
+ }
+ function renderFallbackTours(){
+  var list=[];
+  for(var i=0;i<fallbackTours.length;i++){
+   if(activeFallback==="all" || fallbackTours[i].tags.indexOf(activeFallback)!==-1){list.push(fallbackTours[i]);}
+  }
+  var count=document.getElementById("count");
+  if(count){count.textContent=list.length+" "+(list.length===1?"маршрут":"маршрутов");}
+  var html="";
+  for(var j=0;j<list.length;j++){
+   var t=list[j];
+   var points="";
+   for(var p=0;p<t.points.length;p++){points+="<li>"+escapeFallback(t.points[p])+"</li>";}
+   html+="<article class=\"card\">"+
+    "<h3>"+escapeFallback(t.title)+"</h3>"+
+    "<p class=\"desc\">"+escapeFallback(t.desc)+"</p>"+
+    "<ul class=\"points\">"+points+"</ul>"+
+    "<div class=\"meta\"><span>"+escapeFallback(t.duration)+"</span><span>"+escapeFallback(t.format)+"</span></div>"+
+    "<div class=\"price\">"+escapeFallback(t.price)+"</div>"+
+    "<div class=\"card-actions\"><button class=\"btn btn-secondary\" type=\"button\" data-fallback-detail=\""+escapeFallback(t.id)+"\">Подробнее</button>"+
+    "<button class=\"btn btn-primary\" type=\"button\" data-fallback-apply=\""+escapeFallback(t.id)+"\">Оставить заявку</button></div></article>";
+  }
+  grid.innerHTML=html;
+  bindFallbackCards();
+ }
+ function renderFallbackFilters(){
+  var filters=document.getElementById("filters");
+  if(!filters){return;}
+  var html="";
+  for(var i=0;i<filterDefs.length;i++){
+   html+="<button class=\"chip "+(filterDefs[i][0]===activeFallback?"active":"")+"\" type=\"button\" data-fallback-filter=\""+filterDefs[i][0]+"\">"+filterDefs[i][1]+"</button>";
+  }
+  filters.innerHTML=html;
+  var buttons=filters.querySelectorAll("[data-fallback-filter]");
+  for(var j=0;j<buttons.length;j++){
+   buttons[j].addEventListener("click",function(){activeFallback=this.getAttribute("data-fallback-filter");renderFallbackFilters();renderFallbackTours();});
+  }
+ }
+ function openFallbackApply(id){
+  var t=findTour(id);
+  var modal=document.getElementById("applyModal");
+  if(!modal){return;}
+  var tourId=document.getElementById("tourId");
+  var tourTitle=document.getElementById("tourTitle");
+  var tourPrice=document.getElementById("tourPrice");
+  var badge=document.getElementById("selectedTourBadge");
+  var summary=document.getElementById("summaryTour");
+  var summaryPrice=document.getElementById("summaryPrice");
+  if(tourId){tourId.value=t?t.id:"";}
+  if(tourTitle){tourTitle.value=t?t.title:"Нужна помощь с выбором тура";}
+  if(tourPrice){tourPrice.value=t?t.price:"";}
+  if(badge){badge.textContent=t?t.title:"Общая заявка";}
+  if(summary){summary.textContent=t?t.title:"Помогу подобрать маршрут";}
+  if(summaryPrice){summaryPrice.textContent=t?t.price:"После выбора маршрута";}
+  modal.classList.add("open");
+  document.body.style.overflow="hidden";
+ }
+ function openFallbackDetail(id){
+  var t=findTour(id);
+  if(!t){return;}
+  var modal=document.getElementById("modal");
+  var content=document.getElementById("modalContent");
+  if(!modal || !content){return;}
+  var points="";
+  for(var i=0;i<t.points.length;i++){points+="<li>"+escapeFallback(t.points[i])+"</li>";}
+  content.innerHTML="<h2>"+escapeFallback(t.title)+"</h2><p class=\"lead\">"+escapeFallback(t.desc)+"</p><div class=\"modal-grid\"><div class=\"info\"><small>Длительность</small><b>"+escapeFallback(t.duration)+"</b></div><div class=\"info\"><small>Стоимость</small><b>"+escapeFallback(t.price)+"</b></div></div><div class=\"detail-section\"><h3>Маршрут</h3><ul class=\"points\">"+points+"</ul></div><div class=\"modal-actions\"><button class=\"btn btn-primary\" type=\"button\" data-detail-apply=\""+escapeFallback(t.id)+"\">Оставить заявку</button></div>";
+  modal.classList.add("open");
+  document.body.style.overflow="hidden";
+  var apply=content.querySelector("[data-detail-apply]");
+  if(apply){apply.addEventListener("click",function(){modal.classList.remove("open");openFallbackApply(this.getAttribute("data-detail-apply"));});}
+ }
+ function bindFallbackCards(){
+  var details=grid.querySelectorAll("[data-fallback-detail]");
+  var applies=grid.querySelectorAll("[data-fallback-apply]");
+  for(var i=0;i<details.length;i++){details[i].addEventListener("click",function(){openFallbackDetail(this.getAttribute("data-fallback-detail"));});}
+  for(var j=0;j<applies.length;j++){applies[j].addEventListener("click",function(){openFallbackApply(this.getAttribute("data-fallback-apply"));});}
+ }
+
+ if(typeof window.closeApply!=="function"){
+  window.closeApply=function(){var modal=document.getElementById("applyModal");if(modal){modal.classList.remove("open");}document.body.style.overflow="";};
+ }
+ if(typeof window.closeModal!=="function"){
+  window.closeModal=function(){var modal=document.getElementById("modal");if(modal){modal.classList.remove("open");}document.body.style.overflow="";};
+ }
+ if(typeof window.openApply!=="function"){window.openApply=openFallbackApply;}
+ if(typeof window.openTour!=="function"){window.openTour=openFallbackDetail;}
+
+ renderFallbackFilters();
+ renderFallbackTours();
+})();
+</script>
 </body>
 </html>
