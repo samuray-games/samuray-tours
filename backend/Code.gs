@@ -21,10 +21,20 @@ function doPost(e) {
         return jsonResponse_({ ok: true, duplicate: true });
       }
 
-      const emailResult = sendEmail_(payload);
       const notionResult = createNotionRecord_(payload);
       dedupeStore_(payload);
-      return jsonResponse_({ ok: true, email: emailResult, notion: notionResult });
+
+      try {
+        const emailResult = sendEmail_(payload);
+        return jsonResponse_({ ok: true, email: emailResult, notion: notionResult });
+      } catch (emailErr) {
+        return jsonResponse_({
+          ok: true,
+          partial: true,
+          email: { ok: false, error: String(emailErr && emailErr.message ? emailErr.message : emailErr) },
+          notion: notionResult,
+        });
+      }
     } finally {
       lock.releaseLock();
     }
@@ -109,7 +119,7 @@ function sendEmail_(p) {
 function createNotionRecord_(p) {
   const props = PropertiesService.getScriptProperties();
   const token = props.getProperty('NOTION_TOKEN');
-  const bookingSourceId = props.getProperty('NOTION_DATABASE_ID') || BOOKING_DATA_SOURCE_FALLBACK;
+  const bookingSourceId = props.getProperty('NOTION_BOOKINGS_DATA_SOURCE_ID') || BOOKING_DATA_SOURCE_FALLBACK;
   const routesSourceId = props.getProperty('NOTION_ROUTES_DATA_SOURCE_ID') || ROUTES_DATA_SOURCE_FALLBACK;
   if (!token) throw new Error('Set NOTION_TOKEN in Script Properties');
 
