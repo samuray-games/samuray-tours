@@ -115,29 +115,30 @@ function createNotionRecord_(p) {
 
   const bookingSchema = notionGetDataSourceSchema_(token, bookingSourceId);
   const routesSchema = notionGetDataSourceSchema_(token, routesSourceId);
-  const propertyMap = buildPropertyMap_(bookingSchema.properties || {});
-  const routePropertyMap = buildPropertyMap_(routesSchema.properties || {});
-  const titleName = propertyMap.title || 'Бронирование';
+  const bookingMap = buildPropertyMap_(bookingSchema.properties || {});
+  const routeMap = buildPropertyMap_(routesSchema.properties || {});
+  const titleName = bookingMap.title || 'Бронирование';
   const pageProperties = {};
 
   pageProperties[titleName] = { title: [{ text: { content: safeText_(p.name) + ' - ' + safeText_(p.tourTitle) } }] };
-  setIf_(pageProperties, propertyMap['Дата действия'], dateProp_(p.date));
-  setIf_(pageProperties, propertyMap['Дата бронирования'], dateProp_(new Date().toISOString().slice(0, 10)));
-  setIf_(pageProperties, propertyMap['Гостей'], numberProp_(toInt_(p.adults) + toInt_(p.children)));
-  setIf_(pageProperties, propertyMap['Место встречи / отель'], richTextProp_(safeText_(p.hotel || '')));
-  setIf_(pageProperties, propertyMap['Особые запросы'], richTextProp_(buildNotes_(p)));
-  setIf_(pageProperties, propertyMap['Источник'], selectProp_('Каталог'));
-  setIf_(pageProperties, propertyMap['Канал импорта'], selectProp_('Каталог'));
-  setIf_(pageProperties, propertyMap['Платформа / номер'], richTextProp_(SOURCE_LABEL));
-  setIf_(pageProperties, propertyMap['Имя клиента'], richTextProp_(safeText_(p.name)));
-  setIf_(pageProperties, propertyMap['Контакт'], richTextProp_(safeText_(p.contactType) + ': ' + safeText_(p.contact)));
-  setIf_(pageProperties, propertyMap['Тур'], richTextProp_(safeText_(p.tourTitle)));
-  setIf_(pageProperties, propertyMap['Дата заявки'], dateProp_(new Date().toISOString().slice(0, 10)));
-  setIf_(pageProperties, propertyMap['Интересы'], richTextProp_((p.interests || []).join(', ')));
+  setIf_(pageProperties, bookingMap['Дата действия'], dateProp_(p.date));
+  setIf_(pageProperties, bookingMap['Дата бронирования'], dateProp_(new Date().toISOString().slice(0, 10)));
+  setIf_(pageProperties, bookingMap['Гостей'], numberProp_(toInt_(p.adults) + toInt_(p.children)));
+  setIf_(pageProperties, bookingMap['Место встречи / отель'], richTextProp_(safeText_(p.hotel || '')));
+  setIf_(pageProperties, bookingMap['Особые запросы'], richTextProp_(buildNotes_(p)));
+  setIf_(pageProperties, bookingMap['Источник'], selectProp_('Прямой'));
+  setIf_(pageProperties, bookingMap['Канал импорта'], selectProp_('Другое'));
+  setIf_(pageProperties, bookingMap['Платформа / номер'], richTextProp_(SOURCE_LABEL));
+  setIf_(pageProperties, bookingMap['Имя клиента'], richTextProp_(safeText_(p.name)));
+  setIf_(pageProperties, bookingMap['Контакт'], richTextProp_(safeText_(p.contactType) + ': ' + safeText_(p.contact)));
+  setIf_(pageProperties, bookingMap['Тур'], richTextProp_(safeText_(p.tourTitle)));
+  setIf_(pageProperties, bookingMap['Дата заявки'], dateProp_(new Date().toISOString().slice(0, 10)));
+  setIf_(pageProperties, bookingMap['Интересы'], richTextProp_((p.interests || []).join(', ')));
 
-  const relationName = pickName_(propertyMap, ['Маршрут', 'Маршруты', 'Экскурсия', 'Экскурсии', 'Бронирование']);
-  if (relationName && routePropertyMap.title) {
-    const routePageId = findRoutePageId_(token, routesSourceId, routePropertyMap.title, p.tourTitle);
+  const relationCandidates = ['Маршрут', 'Маршруты', 'Экскурсия', 'Экскурсии'];
+  const relationName = pickRelationName_(bookingSchema.properties || {}, relationCandidates);
+  if (relationName && isRelationProperty_(bookingSchema.properties || {}, relationName) && routeMap.title) {
+    const routePageId = findRoutePageId_(token, routesSourceId, routeMap.title, p.tourTitle);
     if (routePageId) {
       pageProperties[relationName] = { relation: [{ id: routePageId }] };
     }
@@ -207,9 +208,14 @@ function buildPropertyMap_(properties) {
   return map;
 }
 
-function pickName_(map, candidates) {
+function isRelationProperty_(properties, name) {
+  return Boolean(properties && properties[name] && properties[name].type === 'relation');
+}
+
+function pickRelationName_(properties, candidates) {
   for (var i = 0; i < candidates.length; i++) {
-    if (map[candidates[i]]) return map[candidates[i]];
+    var candidate = candidates[i];
+    if (isRelationProperty_(properties, candidate)) return candidate;
   }
   return null;
 }
