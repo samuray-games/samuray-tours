@@ -3,6 +3,28 @@ const SOURCE_LABEL = 'Каталог SamuRay Tours';
 const DEFAULT_NOTION_VERSION = '2026-03-11';
 const ROUTES_DATA_SOURCE_FALLBACK = '3242a1d2-b113-46a3-abe5-942bed2a94d2';
 const BOOKING_DATA_SOURCE_FALLBACK = '5224b52a-a119-4c48-be60-e258a0d1bcc7';
+const ROUTE_CANONICALS_ = [
+  { title: '3D Токио - Мэйдзи Дзингу, Харадзюку, Сибуя', aliases: ['3D Токио', '3d tokyo'] },
+  { title: 'Асакуса: из Эдо в Токио', aliases: ['Асакуса', 'asakusa'] },
+  { title: 'Цукидзи + Гиндза', aliases: ['Цукидзи + Гиндза', 'Цукидзи Гиндза', 'tsukiji', 'tsukiji ginza'] },
+  { title: 'Акихабара + Амэёко', aliases: ['Акихабара + Амэёко', 'Акихабара Амэёко', 'akihabara', 'akiba'] },
+  { title: 'Янака + Нэзу', aliases: ['Янака + Нэзу', 'Янака Нэзу', 'yanaka'] },
+  { title: 'Архитектурный центр Токио', aliases: ['Архитектурный центр Токио', 'architecture'] },
+  { title: 'Сады города', aliases: ['Сады города', 'gardens'] },
+  { title: 'Депачика: гастрономический лабиринт', aliases: ['Депачика: гастрономический лабиринт', 'depachika'] },
+  { title: 'Сакура / Момидзи', aliases: ['Сакура / Момидзи', 'season'] },
+  { title: 'Синдзюку: неон и Голден Гай', aliases: ['Синдзюку: неон и Голден Гай', 'Синдзюку', 'shinjuku'] },
+  { title: 'Классический Токио за день', aliases: ['Классический Токио за день', 'classic'] },
+  { title: 'Современность & традиционность', aliases: ['Современность & традиционность', 'contrast'] },
+  { title: 'Сады и храмы Токио', aliases: ['Сады и храмы Токио', 'temples'] },
+  { title: 'Кулинарный Токио', aliases: ['Кулинарный Токио', 'culinary'] },
+  { title: 'Ночной Токио', aliases: ['Ночной Токио', 'nightfull'] },
+  { title: 'Токио Экспресс', aliases: ['Токио Экспресс', 'express'] },
+  { title: 'Токио для семей с детьми', aliases: ['Токио для семей с детьми', 'family'] },
+  { title: 'Классика + Императорские сады', aliases: ['Классика + Императорские сады', 'imperial'] },
+  { title: 'Одайба и Токийский залив', aliases: ['Одайба и Токийский залив', 'odaiba'] },
+];
+
 
 function doGet() {
   return jsonResponse_({ ok: true, service: 'SamuRay Tours applications' });
@@ -185,6 +207,7 @@ function createNotionRecord_(p) {
     ok: true,
     id: obj.id || null,
     url: obj.url || null,
+    matchedRouteId: routePage && routePage.id ? routePage.id : null,
     relationMatched: Boolean(routePage && routePage.matched),
     relationAmbiguous: Boolean(routePage && routePage.ambiguous),
     matchedRouteTitle: routePage && routePage.title ? routePage.title : null,
@@ -192,40 +215,55 @@ function createNotionRecord_(p) {
 }
 
 function findRoutePage_(token, routesSourceId, titlePropertyName, tourTitle) {
-  const queryTitle = safeText_(tourTitle);
-  if (!queryTitle) return null;
+  const resolved = resolveCanonicalRouteTitle_(tourTitle);
+  if (!resolved) return null;
 
   const exactMatches = notionQueryDataSource_(token, routesSourceId, {
     page_size: 25,
     filter: {
       property: titlePropertyName,
-      title: { equals: queryTitle }
+      title: { equals: resolved.title }
     }
   });
   if (exactMatches.length === 1) {
     return { id: exactMatches[0].id, title: exactMatches[0].title, matched: true, ambiguous: false };
   }
+  if (exactMatches.length > 1) {
+    return { id: null, title: null, matched: false, ambiguous: true };
+  }
 
+  return resolveRouteByExactTitle_(token, routesSourceId, titlePropertyName, resolved.title);
+}
+
+function resolveCanonicalRouteTitle_(tourTitle) {
+  const queryTitle = safeText_(tourTitle);
+  if (!queryTitle) return null;
   const normalizedQuery = normalizeRouteText_(queryTitle);
-  const allRoutes = notionQueryAllDataSourcePages_(token, routesSourceId);
-  const candidates = [];
-  for (var i = 0; i < allRoutes.length; i++) {
-    var route = allRoutes[i];
-    var routeTitle = normalizeRouteText_(route.title || '');
-    if (!routeTitle) continue;
-    if (routeTitle === normalizedQuery) {
-      candidates.push(route);
-      continue;
-    }
-    if (routeTitle.indexOf(normalizedQuery + ' ') === 0 || routeTitle.indexOf(normalizedQuery + '-') === 0 || routeTitle.indexOf(normalizedQuery + ' -') === 0) {
-      candidates.push(route);
-    }
-  }
+  if (!normalizedQuery) return null;
 
-  if (candidates.length === 1) {
-    return { id: candidates[0].id, title: candidates[0].title, matched: true, ambiguous: false };
+  for (var i = 0; i < ROUTE_CANONICALS_.length; i++) {
+    var canonical = ROUTE_CANONICALS_[i];
+    if (!canonical || !canonical.title) continue;
+    if (normalizeRouteText_(canonical.title) === normalizedQuery) return { title: canonical.title };
+    for (var j = 0; j < (canonical.aliases || []).length; j++) {
+      if (normalizeRouteText_(canonical.aliases[j]) === normalizedQuery) return { title: canonical.title };
+    }
   }
-  if (candidates.length > 1) {
+  return null;
+}
+
+function resolveRouteByExactTitle_(token, routesSourceId, titlePropertyName, canonicalTitle) {
+  const exactMatches = notionQueryDataSource_(token, routesSourceId, {
+    page_size: 25,
+    filter: {
+      property: titlePropertyName,
+      title: { equals: canonicalTitle }
+    }
+  });
+  if (exactMatches.length === 1) {
+    return { id: exactMatches[0].id, title: exactMatches[0].title, matched: true, ambiguous: false };
+  }
+  if (exactMatches.length > 1) {
     return { id: null, title: null, matched: false, ambiguous: true };
   }
   return null;
