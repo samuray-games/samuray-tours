@@ -22,6 +22,7 @@
   "imperial":["Классика + Императорские сады","23 900 ₽"],
   "odaiba":["Одайба и Токийский залив","23 900 ₽"]
  };
+ var applyFormTemplate=null;
 
  function esc(value){
   return String(value||"").replace(/[&<>\"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c];});
@@ -36,28 +37,92 @@
   return null;
  }
 
- function openApplication(id){
-  var t=id && tourMap[id] ? tourMap[id] : null;
-  var modal=document.getElementById("applyModal");
-  if(!modal){return;}
+ function getApplyFormWrap(){
+  return document.getElementById("applyFormWrap");
+ }
 
+ function getApplyForm(){
+  return document.getElementById("tourApplication");
+ }
+
+ function captureApplyTemplate(){
+  if(applyFormTemplate!==null){return;}
+  var wrap=getApplyFormWrap();
+  if(wrap){applyFormTemplate=wrap.innerHTML;}
+ }
+
+ function restoreApplyForm(){
+  var wrap=getApplyFormWrap();
+  if(!wrap){return null;}
+  captureApplyTemplate();
+  if(applyFormTemplate!==null){wrap.innerHTML=applyFormTemplate;}
+  return wrap;
+ }
+
+ function bindApplyForm(){
+  var form=getApplyForm();
+  if(form){
+   form.onsubmit=function(event){
+    submitDirectApplication(event);
+    return false;
+   };
+  }
+  var children=document.getElementById("children");
+  if(children && !children.getAttribute("data-bound")){
+   children.setAttribute("data-bound","1");
+   children.onchange=function(e){
+    var field=document.getElementById("childrenAgesField");
+    if(field){field.style.display=e && e.target && e.target.value==="0" ? "none" : "flex";}
+   };
+  }
+ }
+
+ function setSelectedTourFields(t){
   var tourId=document.getElementById("tourId");
   var tourTitle=document.getElementById("tourTitle");
   var tourPrice=document.getElementById("tourPrice");
   var badge=document.getElementById("selectedTourBadge");
   var summary=document.getElementById("summaryTour");
   var summaryPrice=document.getElementById("summaryPrice");
-
-  if(tourId){tourId.value=t?id:"";}
+  if(tourId){tourId.value=t?t[0]:"";}
   if(tourTitle){tourTitle.value=t?t[0]:"Нужна помощь с выбором тура";}
   if(tourPrice){tourPrice.value=t?t[1]:"";}
   if(badge){badge.textContent=t?t[0]:"Общая заявка";}
   if(summary){summary.textContent=t?t[0]:"Помогу подобрать маршрут";}
   if(summaryPrice){summaryPrice.textContent=t?t[1]:"После выбора маршрута";}
+ }
 
+ function resetApplicationFields(t){
+  var form=getApplyForm();
+  var btn=document.getElementById("submitBtn");
+  var status=document.getElementById("formStatus");
+  var childrenAgesField=document.getElementById("childrenAgesField");
+  if(!form){return;}
+  form.reset();
+  setSelectedTourFields(t);
+  if(childrenAgesField){childrenAgesField.style.display="none";}
+  var children=document.getElementById("children");
+  if(children){children.value="0";}
+  if(btn){btn.disabled=false;btn.textContent="Отправить заявку";}
+  if(status){status.textContent="Заявка ни к чему не обязывает. Сначала подтверждаем дату.";status.style.color="";}
+}
+
+ function openApplicationState(id){
+  var t=id && tourMap[id] ? tourMap[id] : null;
+  var modal=document.getElementById("applyModal");
+  if(!modal){return;}
+  restoreApplyForm();
+  bindApplyForm();
+  resetApplicationFields(t);
+  var status=document.getElementById("formStatus");
+  if(status){status.innerHTML="Заявка ни к чему не обязывает. Сначала подтверждаем дату.";status.style.color="";}
   modal.scrollTop=0;
   modal.classList.add("open");
   document.body.style.overflow="hidden";
+ }
+
+ function openApplication(id){
+  openApplicationState(id);
  }
 
  function collectForm(form){
@@ -75,6 +140,25 @@
    data.tourTitle="Нужна помощь с выбором тура";
   }
   return data;
+ }
+
+ function renderSuccessBox(data, result){
+  var wrap=getApplyFormWrap();
+  if(!wrap){return;}
+  var notionUrl=result && result.notion && result.notion.url ? result.notion.url : "";
+  var calendarUrl=result && result.calendar && result.calendar.url ? result.calendar.url : "";
+  var calendarTitle=result && result.calendar && result.calendar.title ? result.calendar.title : "Недоступно";
+  wrap.innerHTML=
+   "<div class=\"success-box\">"+
+    "<div class=\"kicker\">Заявка отправлена</div>"+
+    "<h2>Спасибо, "+esc(data.name)+".</h2>"+
+    "<p>Заявка на «"+esc(data.tourTitle)+"» сохранена. Я проверю дату и свяжусь с вами по указанному контакту. Бронирование считается подтверждённым только после моего ответа.</p>"+
+    "<div class=\"success-meta\">"+
+     "<div><small>CRM Notion</small>"+(notionUrl ? "<a href=\""+esc(notionUrl)+"\" target=\"_blank\" rel=\"noopener\">Открыть карточку</a>" : "<span>Недоступно</span>")+"</div>"+
+     "<div><small>Календарь</small>"+(calendarUrl ? "<a href=\""+esc(calendarUrl)+"\" target=\"_blank\" rel=\"noopener\">"+esc(calendarTitle)+"</a>" : "<span>Недоступно</span>")+"</div>"+
+    "</div>"+
+    "<button class=\"btn btn-primary\" type=\"button\" data-direct-close=\"1\">Вернуться к экскурсиям</button>"+
+   "</div>";
  }
 
  async function submitDirectApplication(event){
@@ -98,11 +182,7 @@
    });
    var result=await response.json();
    if(!result || !result.ok){throw new Error(result && result.error ? result.error : "Не удалось отправить заявку");}
-
-   var wrap=document.getElementById("applyFormWrap");
-   if(wrap){
-    wrap.innerHTML="<div class=\"success-box\"><div class=\"kicker\">Заявка отправлена</div><h2>Спасибо, "+esc(data.name)+".</h2><p>Заявка на «"+esc(data.tourTitle)+"» сохранена. Я проверю дату и свяжусь с вами по указанному контакту. Бронирование считается подтверждённым только после моего ответа.</p><button class=\"btn btn-primary\" type=\"button\" data-direct-close=\"1\">Вернуться к экскурсиям</button></div>";
-   }
+   renderSuccessBox(data, result);
   }catch(error){
    if(status){
     status.innerHTML="Не удалось отправить автоматически. Проверьте связь и попробуйте ещё раз. Если ошибка повторится, напишите Райхану в Telegram: <a href=\"https://t.me/samuray_han\" target=\"_blank\" rel=\"noopener\">@samuray_han</a>.";
@@ -113,8 +193,36 @@
   return false;
  }
 
+ function runApplicationRegression(){
+  var report={ok:true,steps:[]};
+  try{
+   openApplicationState("3d");
+   var name=document.getElementById("name");
+   var date=document.getElementById("date");
+   var contact=document.getElementById("contact");
+   if(name){name.value="Regression Test";}
+   if(date){date.value="2026-09-30";}
+   if(contact){contact.value="@regression";}
+   renderSuccessBox({name:"Regression Test",tourTitle:"3D Токио"},{notion:{url:"https://example.com/notion"},calendar:{url:"https://example.com/calendar",title:"Заявка"}});
+   report.steps.push(document.querySelector(".success-box") ? "success-visible" : "success-missing");
+   var closeBtn=document.querySelector("[data-direct-close]");
+   if(closeBtn){closeBtn.click();}
+   openApplicationState("asakusa");
+   report.steps.push(getApplyForm() ? "form-restored" : "form-missing");
+   report.steps.push(document.getElementById("tourTitle") && document.getElementById("tourTitle").value==="Асакуса: из Эдо в Токио" ? "tour-reset" : "tour-not-reset");
+   report.steps.push(document.getElementById("name") && !document.getElementById("name").value ? "name-cleared" : "name-not-cleared");
+   report.steps.push(document.getElementById("submitBtn") && !document.getElementById("submitBtn").disabled ? "submit-enabled" : "submit-disabled");
+  }catch(err){
+   report.ok=false;
+   report.error=String(err && err.message ? err.message : err);
+  }
+  return report;
+ }
+
  window.openApply=openApplication;
  window.submitApplication=submitDirectApplication;
+ window.__samurayToursRunApplicationRegression=runApplicationRegression;
+ window.__samurayToursResetApplicationForm=function(id){openApplicationState(id || ""); return true;};
 
  document.addEventListener("click",function(event){
   var fallbackApply=findAttrTarget(event.target,"data-fallback-apply");
@@ -144,5 +252,8 @@
    submitDirectApplication(event);
   },true);
  }
+
+ captureApplyTemplate();
+ bindApplyForm();
 })();
 </script>

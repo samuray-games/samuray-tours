@@ -38,25 +38,78 @@ function doPost(e) {
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
     try {
-      const duplicate = dedupeCheck_(payload);
-      if (duplicate) {
-        return jsonResponse_({ ok: true, duplicate: true });
+      const state = loadTransactionState_(payload) || {};
+      if (state.complete && state.notion && state.calendar && state.email) {
+        return jsonResponse_({ ok: true, duplicate: true, notion: state.notion, calendar: state.calendar, email: state.email });
       }
 
-      const notionResult = createNotionRecord_(payload);
-      dedupeStore_(payload);
-
-      try {
-        const emailResult = sendEmail_(payload, notionResult);
-        return jsonResponse_({ ok: true, email: emailResult, notion: notionResult });
-      } catch (emailErr) {
-        return jsonResponse_({
-          ok: true,
-          partial: true,
-          email: { ok: false, error: String(emailErr && emailErr.message ? emailErr.message : emailErr) },
-          notion: notionResult,
-        });
+      if (!state.rawPayload) {
+        state.rawPayload = snapshotPayload_(payload);
       }
+
+      let notionResult = state.notion || null;
+      let calendarResult = state.calendar || null;
+      let emailResult = state.email || null;
+
+      if (!notionResult) {
+        notionResult = createNotionRecord_(payload);
+        state.notion = notionResult;
+        state.notionCreatedAt = new Date().toISOString();
+        saveTransactionState_(payload, state);
+      }
+
+      if (!calendarResult) {
+        try {
+          calendarResult = createCalendarEvent_(payload, notionResult);
+          state.calendar = calendarResult;
+          state.calendarCreatedAt = new Date().toISOString();
+          saveTransactionState_(payload, state);
+        } catch (calendarErr) {
+          state.calendarError = String(calendarErr && calendarErr.message ? calendarErr.message : calendarErr);
+          saveTransactionState_(payload, state);
+          try {
+            emailResult = sendEmail_(payload, notionResult, null, state.calendarError);
+            state.email = emailResult;
+            state.emailSentAt = new Date().toISOString();
+            saveTransactionState_(payload, state);
+          } catch (emailErrAfterCalendarFailure) {
+            state.emailError = String(emailErrAfterCalendarFailure && emailErrAfterCalendarFailure.message ? emailErrAfterCalendarFailure.message : emailErrAfterCalendarFailure);
+            saveTransactionState_(payload, state);
+          }
+          return jsonResponse_({
+            ok: true,
+            partial: true,
+            notion: notionResult,
+            calendar: { ok: false, error: state.calendarError },
+            email: emailResult ? emailResult : (state.email ? state.email : { ok: false, skipped: true }),
+          });
+        }
+      }
+
+      if (!emailResult) {
+        try {
+          emailResult = sendEmail_(payload, notionResult, calendarResult, null);
+          state.email = emailResult;
+          state.emailSentAt = new Date().toISOString();
+          saveTransactionState_(payload, state);
+        } catch (emailErr) {
+          state.emailError = String(emailErr && emailErr.message ? emailErr.message : emailErr);
+          saveTransactionState_(payload, state);
+          return jsonResponse_({
+            ok: true,
+            partial: true,
+            notion: notionResult,
+            calendar: calendarResult,
+            email: { ok: false, error: state.emailError },
+          });
+        }
+      }
+
+      state.complete = true;
+      saveTransactionState_(payload, state);
+      dedupeStore_(payload, state);
+
+      return jsonResponse_({ ok: true, notion: notionResult, calendar: calendarResult, email: emailResult });
     } finally {
       lock.releaseLock();
     }
@@ -97,15 +150,16 @@ function dedupeKey_(p) {
   ].join('|');
 }
 
-function dedupeStore_(p) {
+function dedupeStore_(p, state) {
   CacheService.getScriptCache().put(dedupeKey_(p), String(Date.now()), 600);
+  saveTransactionState_(p, state || { complete: true });
 }
 
 function dedupeCheck_(p) {
   return Boolean(CacheService.getScriptCache().get(dedupeKey_(p)));
 }
 
-function sendEmail_(p, notionResult) {
+function sendEmail_(p, notionResult, calendarResult, calendarError) {
   const adults = toInt_(p.adults);
   const children = toInt_(p.children);
   const guests = adults + children;
@@ -127,6 +181,9 @@ function sendEmail_(p, notionResult) {
     'Контакт: ' + safeText_(p.contact),
     'Источник: ' + SOURCE_LABEL,
     'CRM Notion: ' + safeText_(notionResult && notionResult.url ? notionResult.url : '-'),
+    'Calendar: ' + safeText_(calendarResult && calendarResult.url ? calendarResult.url : '-'),
+    'Calendar status: ' + safeText_(calendarResult && calendarResult.ok ? 'ok' : 'error'),
+    'Calendar error: ' + safeText_(calendarError || (calendarResult && calendarResult.error ? calendarResult.error : '-')),
     'Страница каталога: ' + safeText_(p.pageUrl || '-'),
     'Отправлено: ' + safeText_(p.submittedAt || new Date().toISOString())
   ].join('\n');
@@ -137,6 +194,61 @@ function sendEmail_(p, notionResult) {
     name: 'SamuRay Tours'
   });
   return { ok: true, to: OWNER_EMAIL };
+}
+
+function createCalendarEvent_(p, notionResult) {
+  const props = PropertiesService.getScriptProperties();
+  const key = transactionKey_(p);
+  const eventMarker = 'SamuRay Tours import key: ' + key;
+  const calendar = CalendarApp.getDefaultCalendar();
+  if (!calendar) throw new Error('Default calendar not available');
+  const eventDate = parseDateOnly_(p.date);
+  if (!eventDate) throw new Error('Invalid calendar date: ' + safeText_(p.date));
+
+  const existing = findExistingCalendarEvent_(calendar, eventDate, eventMarker);
+  if (existing) {
+    return {
+      ok: true,
+      id: existing.id || null,
+      url: existing.url || null,
+      date: safeText_(p.date),
+      title: 'Заявка',
+      duplicate: true,
+      eventMarker: eventMarker,
+    };
+  }
+
+  const description = [
+    'Тур: ' + safeText_(p.tourTitle),
+    'Клиент: ' + safeText_(p.name),
+    'Связь / контакт: ' + safeText_(p.contactType) + ' / ' + safeText_(p.contact),
+    'Гостей: ' + (toInt_(p.adults) + toInt_(p.children)),
+    'Основная дата: ' + safeText_(p.date),
+    'Альтернативная дата: ' + safeText_(p.altDate || '-'),
+    'Отель / район: ' + safeText_(p.hotel || '-'),
+    'Интересы: ' + safeText_((p.interests || []).join(', ') || '-'),
+    'Пожелания: ' + safeText_(p.notes || '-'),
+    'Цена каталога: ' + safeText_(p.tourPrice || '-'),
+    'CRM Notion URL: ' + safeText_(notionResult && notionResult.url ? notionResult.url : '-'),
+    'Источник = ' + SOURCE_LABEL,
+    eventMarker,
+  ].join('\n');
+
+  const event = calendar.createAllDayEvent('Заявка', eventDate, {
+    description: description,
+  });
+
+  if (!event) throw new Error('Calendar event creation failed');
+  const result = {
+    ok: true,
+    id: event.getId ? event.getId() : null,
+    url: event.getHtmlLink ? event.getHtmlLink() : null,
+    date: safeText_(p.date),
+    title: 'Заявка',
+    eventMarker: eventMarker,
+  };
+  props.setProperty(transactionKey_(p) + ':calendar', JSON.stringify(result));
+  return result;
 }
 
 function createNotionRecord_(p) {
@@ -467,4 +579,69 @@ function safeText_(value) {
 
 function jsonResponse_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function transactionKey_(p) {
+  return 'samuray:' + Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, dedupeKey_(p)));
+}
+
+function loadTransactionState_(p) {
+  const raw = PropertiesService.getScriptProperties().getProperty(transactionKey_(p) + ':state');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    return null;
+  }
+}
+
+function saveTransactionState_(p, state) {
+  PropertiesService.getScriptProperties().setProperty(transactionKey_(p) + ':state', JSON.stringify(state || {}));
+}
+
+function snapshotPayload_(p) {
+  return {
+    tourTitle: safeText_(p.tourTitle),
+    date: safeText_(p.date),
+    altDate: safeText_(p.altDate || ''),
+    adults: safeText_(p.adults || ''),
+    children: safeText_(p.children || ''),
+    childrenAges: safeText_(p.childrenAges || ''),
+    hotel: safeText_(p.hotel || ''),
+    interests: Array.isArray(p.interests) ? p.interests.slice() : [],
+    notes: safeText_(p.notes || ''),
+    name: safeText_(p.name),
+    contactType: safeText_(p.contactType),
+    contact: safeText_(p.contact),
+    tourPrice: safeText_(p.tourPrice || ''),
+    pageUrl: safeText_(p.pageUrl || ''),
+    submittedAt: safeText_(p.submittedAt || ''),
+  };
+}
+
+function parseDateOnly_(value) {
+  const text = safeText_(value);
+  if (!text) return null;
+  const parts = text.split('-');
+  if (parts.length !== 3) return null;
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  return new Date(year, month - 1, day);
+}
+
+function findExistingCalendarEvent_(calendar, eventDate, marker) {
+  const events = calendar.getEventsForDay(eventDate);
+  for (let i = 0; i < events.length; i++) {
+    const event = events[i];
+    const description = event && event.getDescription ? event.getDescription() : '';
+    if (event && event.getTitle && event.getTitle() === 'Заявка' && String(description || '').indexOf(marker) !== -1) {
+      return {
+        id: event.getId ? event.getId() : null,
+        url: event.getHtmlLink ? event.getHtmlLink() : null,
+      };
+    }
+  }
+  return null;
 }
