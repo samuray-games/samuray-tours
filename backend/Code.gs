@@ -30,7 +30,7 @@ function doGet() {
   return jsonResponse_({ ok: true, service: 'SamuRay Tours applications' });
 }
 
-function authorizeCalendarScope_() {
+function authorizeCalendarScope() {
   ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, [
     'https://www.googleapis.com/auth/calendar'
   ]);
