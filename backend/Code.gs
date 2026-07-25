@@ -30,6 +30,20 @@ function doGet() {
   return jsonResponse_({ ok: true, service: 'SamuRay Tours applications' });
 }
 
+function authorizeCalendarScope_() {
+  ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, [
+    'https://www.googleapis.com/auth/calendar'
+  ]);
+  const calendar = CalendarApp.getDefaultCalendar();
+  if (!calendar) throw new Error('Default calendar not available');
+  const result = {
+    authorized: true,
+    calendarName: calendar.getName ? calendar.getName() : 'default'
+  };
+  console.log(JSON.stringify(result));
+  return result;
+}
+
 function doPost(e) {
   try {
     const payload = parsePayload_(e);
