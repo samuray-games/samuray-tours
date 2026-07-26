@@ -172,6 +172,28 @@ function dedupeCheck_(p) {
   return Boolean(CacheService.getScriptCache().get(dedupeKey_(p)));
 }
 
+function calendarUrlFromResult_(calendarResult) {
+  if (!calendarResult) return '';
+  return safeText_(calendarResult.url || calendarResult.eventUrl || calendarResult.link || '');
+}
+
+function buildCalendarEventUrl_(calendar, event) {
+  try {
+    if (event && event.getHtmlLink) {
+      const html = event.getHtmlLink();
+      if (html) return String(html);
+    }
+  } catch (err) {
+    // Fall through to the stable constructed URL.
+  }
+
+  const eventId = event && event.getId ? String(event.getId()) : '';
+  const calendarId = calendar && calendar.getId ? String(calendar.getId()) : '';
+  if (!eventId || !calendarId) return '';
+  const eid = Utilities.base64EncodeWebSafe(eventId + ' ' + calendarId).replace(/=+$/, '');
+  return 'https://calendar.google.com/calendar/event?eid=' + eid;
+}
+
 function sendEmail_(p, notionResult, calendarResult, calendarError) {
   const adults = toInt_(p.adults);
   const children = toInt_(p.children);
@@ -270,33 +292,86 @@ function createCalendarEvent_(p, notionResult) {
   return result;
 }
 
+function createNotionRecord_(p) {
+  const props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('NOTION_TOKEN');
+  const bookingSourceId = props.getProperty('NOTION_BOOKINGS_DATA_SOURCE_ID') || BOOKING_DATA_SOURCE_FALLBACK;
+  const routesSourceId = props.getProperty('NOTION_ROUTES_DATA_SOURCE_ID') || ROUTES_DATA_SOURCE_FALLBACK;
+  if (!token) throw new Error('Set NOTION_TOKEN in Script Properties');
+
+  const bookingSchema = notionGetDataSourceSchema_(token, bookingSourceId);
+  const routesSchema = notionGetDataSourceSchema_(token, routesSourceId);
+  const bookingProperties = bookingSchema.properties || {};
+  const bookingMap = buildPropertyMap_(bookingProperties);
+  const routeMap = buildPropertyMap_(routesSchema.properties || {});
+  const titleName = bookingMap.title || 'Бронирование';
+  const pageProperties = {};
+
+  pageProperties[titleName] = { title: [{ text: { content: safeText_(p.name) + ' - ' + safeText_(p.tourTitle) } }] };
+  setIf_(pageProperties, bookingMap['Дата действия'], dateProp_(p.date));
+  setIf_(pageProperties, bookingMap['Дата бронирования'], dateProp_(new Date().toISOString().slice(0, 10)));
+  setIf_(pageProperties, bookingMap['Гостей'], numberProp_(toInt_(p.adults) + toInt_(p.children)));
+  setIf_(pageProperties, bookingMap['Место встречи / отель'], richTextProp_(safeText_(p.hotel || '')));
+  setIf_(pageProperties, bookingMap['Особые запросы'], richTextProp_(buildNotes_(p)));
+  setIf_(pageProperties, bookingMap['Источник'], selectProp_('Прямой'));
+  setIf_(pageProperties, bookingMap['Канал импорта'], selectProp_('Другое'));
+  setIf_(pageProperties, bookingMap['Платформа / номер'], richTextProp_(SOURCE_LABEL));
+  setIf_(pageProperties, bookingMap['Имя клиента'], richTextProp_(safeText_(p.name)));
+  setIf_(pageProperties, bookingMap['Контакт'], richTextProp_(safeText_(p.contactType) + ': ' + safeText_(p.contact)));
+  setIf_(pageProperties, bookingMap['Тур'], richTextProp_(safeText_(p.tourTitle)));
+  setIf_(pageProperties, bookingMap['Дата заявки'], dateProp_(new Date().toISOString().slice(0, 10)));
+  setIf_(pageProperties, bookingMap['Интересы'], richTextProp_((p.interests || []).join(', ')));
+
+  // Make website leads immediately visible in the normal operational CRM views.
+  setSchemaField_(pageProperties, bookingProperties, 'Статус', 'Ожидает оплаты');
+  setSchemaField_(pageProperties, bookingProperties, 'Оплата', 'Не согласована');
+  setSchemaField_(pageProperties, bookingProperties, 'Импорт требует внимания', true);
+  setSchemaField_(pageProperties, bookingProperties, 'Импорт проверен', false);
+  setSchemaField_(pageProperties, bookingProperties, 'Следующее действие', 'Связаться с клиентом по заявке из каталога');
+  setSchemaField_(pageProperties, bookingProperties, 'Групп', 1);
+
+  const relationCandidates = ['Маршрут', 'Маршруты', 'Экскурсия', 'Экскурсии'];
+  const relationName = pickRelationName_(bookingProperties, relationCandidates);
+  const routePage = relationName && isRelationProperty_(bookingProperties, relationName) && routeMap.title
+    ? findRoutePage_(token, routesSourceId, routeMap.title, p.tourTitle)
+    : null;
+  if (routePage && routePage.id) {
+    pageProperties[relationName] = { relation: [{ id: routePage.id }] };
+  }
+
+  const payload = {
+    parent: { data_source_id: bookingSourceId },
+    properties: pageProperties,
+  };
+
+  const response = UrlFetchApp.fetch('https://api.notion.com/v1/pages', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: notionHeaders_(token),
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true,
+  });
+
+  const code = response.getResponseCode();
+  const txt = response.getContentText();
+  if (code < 200 || code >= 300) throw new Error('Notion error ' + code + ': ' + txt);
+  const obj = JSON.parse(txt);
+  return {
+    ok: true,
+    id: obj.id || null,
+    url: obj.url || null,
+    matchedRouteId: routePage && routePage.id ? routePage.id : null,
+    relationMatched: Boolean(routePage && routePage.matched),
+    relationAmbiguous: Boolean(routePage && routePage.ambiguous),
+    matchedRouteTitle: routePage && routePage.title ? routePage.title : null,
+  };
+}
+
 function routeRelationRegressionCheck_(token, routesSourceId, titlePropertyName) {
   return {
     tsukiji: findRoutePage_(token, routesSourceId, titlePropertyName, 'Цукидзи + Гиндза'),
     tokyoExpress: findRoutePage_(token, routesSourceId, titlePropertyName, 'Токио Экспресс'),
   };
-}
-
-function calendarUrlFromResult_(calendarResult) {
-  if (!calendarResult) return '';
-  return safeText_(calendarResult.url || calendarResult.eventUrl || calendarResult.link || '');
-}
-
-function buildCalendarEventUrl_(calendar, event) {
-  try {
-    if (event && event.getHtmlLink) {
-      const html = event.getHtmlLink();
-      if (html) return String(html);
-    }
-  } catch (err) {
-    // Fall through to the stable constructed URL.
-  }
-
-  const eventId = event && event.getId ? String(event.getId()) : '';
-  const calendarId = calendar && calendar.getId ? String(calendar.getId()) : '';
-  if (!eventId || !calendarId) return '';
-  const eid = Utilities.base64EncodeWebSafe(eventId + ' ' + calendarId).replace(/=+$/, '');
-  return 'https://calendar.google.com/calendar/event?eid=' + eid;
 }
 
 function findRoutePage_(token, routesSourceId, titlePropertyName, tourTitle) {
@@ -429,117 +504,6 @@ function scoreRoutePage_(pageTitle, candidates) {
   }
   return best;
 }
-
-function calendarUrlFromResult_(calendarResult) {
-  if (!calendarResult) return '';
-  return safeText_(calendarResult.url || calendarResult.eventUrl || calendarResult.link || '');
-}
-
-function createCalendarEvent_(p, notionResult) {
-  const props = PropertiesService.getScriptProperties();
-  const key = transactionKey_(p);
-  const eventMarker = 'SamuRay Tours import key: ' + key;
-  const calendar = CalendarApp.getDefaultCalendar();
-  if (!calendar) throw new Error('Default calendar not available');
-  const eventDate = parseDateOnly_(p.date);
-  if (!eventDate) throw new Error('Invalid calendar date: ' + safeText_(p.date));
-
-  const existing = findExistingCalendarEvent_(calendar, eventDate, eventMarker);
-  if (existing) {
-    return {
-      ok: true,
-      id: existing.id || null,
-      eventId: existing.id || null,
-      url: existing.url || null,
-      eventUrl: existing.url || null,
-      date: safeText_(p.date),
-      title: 'Заявка',
-      duplicate: true,
-      eventMarker: eventMarker,
-    };
-  }
-
-  const description = [
-    'Тур: ' + safeText_(p.tourTitle),
-    'Клиент: ' + safeText_(p.name),
-    'Связь / контакт: ' + safeText_(p.contactType) + ' / ' + safeText_(p.contact),
-    'Гостей: ' + (toInt_(p.adults) + toInt_(p.children)),
-    'Основная дата: ' + safeText_(p.date),
-    'Альтернативная дата: ' + safeText_(p.altDate || '-'),
-    'Отель / район: ' + safeText_(p.hotel || '-'),
-    'Интересы: ' + safeText_((p.interests || []).join(', ') || '-'),
-    'Пожелания: ' + safeText_(p.notes || '-'),
-    'Цена каталога: ' + safeText_(p.tourPrice || '-'),
-    'CRM Notion URL: ' + safeText_(notionResult && notionResult.url ? notionResult.url : '-'),
-    'Источник = ' + SOURCE_LABEL,
-    eventMarker,
-  ].join('\n');
-
-  const event = calendar.createAllDayEvent('Заявка', eventDate, {
-    description: description,
-  });
-
-  if (!event) throw new Error('Calendar event creation failed');
-  const eventUrl = buildCalendarEventUrl_(calendar, event);
-  const result = {
-    ok: true,
-    id: event.getId ? event.getId() : null,
-    eventId: event.getId ? event.getId() : null,
-    url: eventUrl || null,
-    eventUrl: eventUrl || null,
-    date: safeText_(p.date),
-    title: 'Заявка',
-    eventMarker: eventMarker,
-  };
-  props.setProperty(transactionKey_(p) + ':calendar', JSON.stringify(result));
-  return result;
-}
-
-function sendEmail_(p, notionResult, calendarResult, calendarError) {
-  const adults = toInt_(p.adults);
-  const children = toInt_(p.children);
-  const guests = adults + children;
-  const calendarLink = calendarUrlFromResult_(calendarResult);
-  const body = [
-    'Новая заявка из каталога SamuRay Tours',
-    '',
-    'Тур: ' + safeText_(p.tourTitle),
-    'Цена в каталоге: ' + safeText_(p.tourPrice || '-'),
-    'Дата: ' + safeText_(p.date),
-    'Альтернативная дата: ' + safeText_(p.altDate || '-'),
-    'Гостей: ' + guests + ' (' + adults + ' взрослых, ' + children + ' детей)',
-    'Возраст детей: ' + safeText_(p.childrenAges || '-'),
-    'Отель / район: ' + safeText_(p.hotel || '-'),
-    'Интересы: ' + safeText_((p.interests || []).join(', ') || '-'),
-    'Пожелания: ' + safeText_(p.notes || '-'),
-    '',
-    'Клиент: ' + safeText_(p.name),
-    'Связь: ' + safeText_(p.contactType),
-    'Контакт: ' + safeText_(p.contact),
-    'Источник: ' + SOURCE_LABEL,
-    'CRM Notion: ' + safeText_(notionResult && notionResult.url ? notionResult.url : '-'),
-    'Calendar: ' + safeText_(calendarLink || '-'),
-    'Calendar status: ' + safeText_(calendarResult && calendarResult.ok ? 'ok' : 'error'),
-    'Calendar error: ' + safeText_(calendarError || (calendarResult && calendarResult.error ? calendarResult.error : '-')),
-    'Страница каталога: ' + safeText_(p.pageUrl || '-'),
-    'Отправлено: ' + safeText_(p.submittedAt || new Date().toISOString())
-  ].join('\n');
-  MailApp.sendEmail({
-    to: OWNER_EMAIL,
-    subject: 'Новая заявка SamuRay Tours: ' + safeText_(p.tourTitle) + ' - ' + safeText_(p.date),
-    body: body,
-    name: 'SamuRay Tours'
-  });
-  return { ok: true, to: OWNER_EMAIL };
-}
-
-function routeRelationRegressionCheck_(token, routesSourceId, titlePropertyName) {
-  return {
-    tsukiji: findRoutePage_(token, routesSourceId, titlePropertyName, 'Цукидзи + Гиндза'),
-    tokyoExpress: findRoutePage_(token, routesSourceId, titlePropertyName, 'Токио Экспресс'),
-  };
-}
-
 function notionQueryDataSource_(token, dataSourceId, body) {
   const response = UrlFetchApp.fetch('https://api.notion.com/v1/data_sources/' + encodeURIComponent(String(dataSourceId).replace(/^collection:\/\//, '')) + '/query', {
     method: 'post',
@@ -720,7 +684,7 @@ function buildNotes_(p) {
   const lines = [];
   if (p.notes) lines.push('Пожелания: ' + safeText_(p.notes));
   if ((p.interests || []).length) lines.push('Интересы: ' + (p.interests || []).join(', '));
-  if (toInt_(p.children)) lines.push('Дети: ' + toInt_(p.children) + '; Возраст детей: ' + safeText_(p.childrenAges || '-'));
+  if (toInt_(p.children)) lines.push('Дети: ' + toInt_(p.children) + '; возраст: ' + safeText_(p.childrenAges || 'не указан'));
   if (p.altDate) lines.push('Альтернативная дата: ' + safeText_(p.altDate));
   lines.push('Контакт: ' + safeText_(p.contactType) + ' - ' + safeText_(p.contact));
   lines.push('Источник: ' + SOURCE_LABEL);
