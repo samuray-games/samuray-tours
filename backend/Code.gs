@@ -6,7 +6,7 @@ const BOOKING_DATA_SOURCE_FALLBACK = '5224b52a-a119-4c48-be60-e258a0d1bcc7';
 const ROUTE_CANONICALS_ = [
   { title: '3D Токио - Мэйдзи Дзингу, Харадзюку, Сибуя', aliases: ['3D Токио', '3d tokyo'] },
   { title: 'Асакуса: из Эдо в Токио', aliases: ['Асакуса', 'asakusa'] },
-  { title: 'Цукидзи + Гиндза', aliases: ['Цукидзи + Гиндза', 'Цукидзи Гиндза', 'tsukiji', 'tsukiji ginza'] },
+  { title: 'Утренний Цукидзи Food Sprint + Гиндза-глам', aliases: ['Цукидзи + Гиндза', 'Цукидзи Гиндза', 'Утренний Цукидзи Food Sprint + Гиндза-глам', 'tsukiji', 'tsukiji ginza'] },
   { title: 'Акихабара + Амэёко', aliases: ['Акихабара + Амэёко', 'Акихабара Амэёко', 'akihabara', 'akiba'] },
   { title: 'Янака + Нэзу', aliases: ['Янака + Нэзу', 'Янака Нэзу', 'yanaka'] },
   { title: 'Архитектурный центр Токио', aliases: ['Архитектурный центр Токио', 'architecture'] },
@@ -19,7 +19,7 @@ const ROUTE_CANONICALS_ = [
   { title: 'Сады и храмы Токио', aliases: ['Сады и храмы Токио', 'temples'] },
   { title: 'Кулинарный Токио', aliases: ['Кулинарный Токио', 'culinary'] },
   { title: 'Ночной Токио', aliases: ['Ночной Токио', 'nightfull'] },
-  { title: 'Токио Экспресс', aliases: ['Токио Экспресс', 'express'] },
+  { title: 'Экспресс "Всё за день"', aliases: ['Токио Экспресс', 'Экспресс "Всё за день"', 'express'] },
   { title: 'Токио для семей с детьми', aliases: ['Токио для семей с детьми', 'family'] },
   { title: 'Классика + Императорские сады', aliases: ['Классика + Императорские сады', 'imperial'] },
   { title: 'Одайба и Токийский залив', aliases: ['Одайба и Токийский залив', 'odaiba'] },
