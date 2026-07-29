@@ -47,6 +47,9 @@
   var button=findClickableAncestor(node);
   if(!button || !button.getAttribute){return "";}
 
+  var catalog25Id=button.getAttribute("data-catalog25-detail");
+  if(catalog25Id){return catalog25Id;}
+
   var fallbackId=button.getAttribute("data-fallback-detail");
   if(fallbackId){return fallbackId;}
 
@@ -89,7 +92,8 @@
   return raw.indexOf("openApply(")!==-1 ||
    button.getAttribute("data-full-apply")!==null ||
    button.getAttribute("data-detail-apply")!==null ||
-   button.getAttribute("data-fallback-apply")!==null;
+   button.getAttribute("data-fallback-apply")!==null ||
+   button.getAttribute("data-catalog25-apply")!==null;
  }
 
  function closeDetailWithoutChangingUrl(){
