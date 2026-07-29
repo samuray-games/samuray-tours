@@ -55,3 +55,38 @@ Backend находится в:
 `Settings -> Pages -> Build and deployment -> Deploy from a branch -> main -> /(root) -> Save`
 
 После включения проверить каталог, фильтры, карточки, подробности, форму и мобильную верстку.
+
+## Атрибуция контента
+
+Заявку можно связать с публикацией в базе `Контент SamuRay Tours`, добавив к URL каталога параметры `content` и `channel`.
+
+Примеры:
+
+- `?content=123&channel=telegram`
+- `?content=123&channel=instagram`
+- `?content=123&channel=vk`
+
+`content` - положительное целое число из свойства `ID контента`.
+
+Допустимые значения `channel`:
+
+- `telegram`
+- `instagram`
+- `vk`
+- `direct`
+
+Backend читает параметры из уже передаваемого `pageUrl`, ищет запись по `ID контента` и при единственном совпадении заполняет relation `Контент` в бронировании. Relation `Контент 1` не используется.
+
+В Google Apps Script можно задать Script Property:
+
+- `NOTION_CONTENT_DATA_SOURCE_ID`
+
+Fallback data source ID:
+
+`28d6d74c-b01d-4a5a-8f32-cbcdb22efcfa`
+
+Ручные безопасные проверки, не создающие бронирования:
+
+- `TEST_PARSE_ATTRIBUTION`
+- `TEST_CONTENT_LOOKUP`
+

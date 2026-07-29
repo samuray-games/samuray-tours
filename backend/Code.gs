@@ -3,6 +3,8 @@ const SOURCE_LABEL = 'Каталог SamuRay Tours';
 const DEFAULT_NOTION_VERSION = '2026-03-11';
 const ROUTES_DATA_SOURCE_FALLBACK = '3242a1d2-b113-46a3-abe5-942bed2a94d2';
 const BOOKING_DATA_SOURCE_FALLBACK = '5224b52a-a119-4c48-be60-e258a0d1bcc7';
+const CONTENT_DATA_SOURCE_FALLBACK = '28d6d74c-b01d-4a5a-8f32-cbcdb22efcfa';
+const ATTRIBUTION_CHANNELS_ = ['telegram', 'instagram', 'vk', 'direct'];
 const ROUTE_CANONICALS_ = [
   { title: '3D Токио - Мэйдзи Дзингу, Харадзюку, Сибуя', aliases: ['3D Токио', '3d tokyo'] },
   { title: 'Асакуса: из Эдо в Токио', aliases: ['Асакуса', 'asakusa'] },
@@ -44,6 +46,56 @@ function authorizeCalendarScope() {
     calendarName: calendar.getName ? calendar.getName() : 'default'
   };
   console.log(JSON.stringify(result));
+  return result;
+}
+
+
+function TEST_PARSE_ATTRIBUTION() {
+  const cases = [
+    'https://samuray-games.github.io/samuray-tours/?content=123&channel=telegram',
+    'https://samuray-games.github.io/samuray-tours/?channel=instagram&content=0042#form',
+    'https://samuray-games.github.io/samuray-tours/?content=abc&channel=vk',
+    'https://samuray-games.github.io/samuray-tours/?content=7&channel=unknown',
+    'https://samuray-games.github.io/samuray-tours/'
+  ];
+  const result = cases.map(function (pageUrl) {
+    return parseAttributionFromPageUrl_(pageUrl);
+  });
+  console.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function TEST_CONTENT_LOOKUP() {
+  const props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('NOTION_TOKEN');
+  const contentSourceId = props.getProperty('NOTION_CONTENT_DATA_SOURCE_ID') || CONTENT_DATA_SOURCE_FALLBACK;
+  if (!token) throw new Error('Set NOTION_TOKEN in Script Properties');
+
+  const schema = notionGetDataSourceSchema_(token, contentSourceId);
+  const idSchema = schema && schema.properties ? schema.properties['ID контента'] : null;
+  if (!idSchema || ['unique_id', 'auto_increment_id'].indexOf(idSchema.type) === -1) {
+    throw new Error('Content data source has no unique ID property: ID контента');
+  }
+
+  const raw = notionQueryRawDataSource_(token, contentSourceId, { page_size: 1 });
+  const first = raw && raw.results && raw.results.length ? raw.results[0] : null;
+  if (!first) {
+    const emptyResult = { ok: false, found: false, reason: 'Content data source is empty' };
+    console.log(JSON.stringify(emptyResult, null, 2));
+    return emptyResult;
+  }
+
+  const contentId = extractNotionUniqueIdNumber_(first.properties && first.properties['ID контента']);
+  if (!contentId) {
+    const missingIdResult = { ok: false, found: false, reason: 'First content record has no ID контента' };
+    console.log(JSON.stringify(missingIdResult, null, 2));
+    return missingIdResult;
+  }
+
+  const result = findContentPageById_(token, contentSourceId, contentId);
+  result.ok = Boolean(result.matched);
+  result.testedContentId = contentId;
+  console.log(JSON.stringify(result, null, 2));
   return result;
 }
 
@@ -203,6 +255,12 @@ function sendEmail_(p, notionResult, calendarResult, calendarError) {
   const children = toInt_(p.children);
   const guests = adults + children;
   const calendarLink = calendarUrlFromResult_(calendarResult);
+  const attribution = notionResult && notionResult.contentAttribution
+    ? notionResult.contentAttribution
+    : buildContentAttributionResult_(parseAttributionFromPageUrl_(p.pageUrl), null);
+  const relationStatus = attribution.requested
+    ? (attribution.matched ? 'найдена' : 'не найдена')
+    : 'не запрашивалась';
   const body = [
     'Новая заявка из каталога SamuRay Tours',
     '',
@@ -219,12 +277,16 @@ function sendEmail_(p, notionResult, calendarResult, calendarError) {
     'Клиент: ' + safeText_(p.name),
     'Связь: ' + safeText_(p.contactType),
     'Контакт: ' + safeText_(p.contact),
-    'Источник: ' + SOURCE_LABEL,
+    'Источник: ' + safeText_(attribution.sourceValue || SOURCE_LABEL),
+    'ID контента: ' + safeText_(attribution.contentId || '-'),
+    'Канал публикации: ' + safeText_(attribution.channelLabel || 'Прямой'),
+    'Связь с контентом: ' + relationStatus,
+    'Ошибка атрибуции: ' + safeText_(attribution.error || '-'),
     'CRM Notion: ' + safeText_(notionResult && notionResult.url ? notionResult.url : '-'),
     'Calendar: ' + safeText_(calendarLink || '-'),
     'Calendar status: ' + safeText_(calendarResult && calendarResult.ok ? 'ok' : 'error'),
     'Calendar error: ' + safeText_(calendarError || (calendarResult && calendarResult.error ? calendarResult.error : '-')),
-    'Страница каталога: ' + safeText_(p.pageUrl || '-'),
+    'URL исходной страницы: ' + safeText_(p.pageUrl || '-'),
     'Отправлено: ' + safeText_(p.submittedAt || new Date().toISOString())
   ].join('\n');
   MailApp.sendEmail({
@@ -235,7 +297,6 @@ function sendEmail_(p, notionResult, calendarResult, calendarError) {
   });
   return { ok: true, to: OWNER_EMAIL };
 }
-
 function createCalendarEvent_(p, notionResult) {
   const props = PropertiesService.getScriptProperties();
   const key = transactionKey_(p);
@@ -301,6 +362,7 @@ function createNotionRecord_(p) {
   const token = props.getProperty('NOTION_TOKEN');
   const bookingSourceId = props.getProperty('NOTION_BOOKINGS_DATA_SOURCE_ID') || BOOKING_DATA_SOURCE_FALLBACK;
   const routesSourceId = props.getProperty('NOTION_ROUTES_DATA_SOURCE_ID') || ROUTES_DATA_SOURCE_FALLBACK;
+  const contentSourceId = props.getProperty('NOTION_CONTENT_DATA_SOURCE_ID') || CONTENT_DATA_SOURCE_FALLBACK;
   if (!token) throw new Error('Set NOTION_TOKEN in Script Properties');
 
   const bookingSchema = notionGetDataSourceSchema_(token, bookingSourceId);
@@ -310,6 +372,10 @@ function createNotionRecord_(p) {
   const routeMap = buildPropertyMap_(routesSchema.properties || {});
   const titleName = bookingMap.title || 'Бронирование';
   const pageProperties = {};
+  const attribution = parseAttributionFromPageUrl_(p.pageUrl);
+  const desiredSourceValue = attributionSourceValue_(attribution.channel);
+  const sourceValue = pickSelectOption_(bookingProperties['Источник'], [desiredSourceValue, 'Прямой', 'Другое']);
+  const channelLabel = attributionChannelLabel_(attribution.channel);
 
   pageProperties[titleName] = { title: [{ text: { content: safeText_(p.name) + ' - ' + safeText_(p.tourTitle) } }] };
   setIf_(pageProperties, bookingMap['Дата действия'], dateProp_(p.date));
@@ -317,16 +383,18 @@ function createNotionRecord_(p) {
   setIf_(pageProperties, bookingMap['Гостей'], numberProp_(toInt_(p.adults) + toInt_(p.children)));
   setIf_(pageProperties, bookingMap['Место встречи / отель'], richTextProp_(safeText_(p.hotel || '')));
   setIf_(pageProperties, bookingMap['Особые запросы'], richTextProp_(buildNotes_(p)));
-  setIf_(pageProperties, bookingMap['Источник'], selectProp_('Прямой'));
-  setIf_(pageProperties, bookingMap['Канал импорта'], selectProp_('Другое'));
-  setIf_(pageProperties, bookingMap['Платформа / номер'], richTextProp_(SOURCE_LABEL));
+  if (sourceValue && bookingMap['Источник']) pageProperties[bookingMap['Источник']] = selectProp_(sourceValue);
+  setSelectIfOptionExists_(pageProperties, bookingProperties, 'Канал импорта', 'Другое');
+  const platformText = attribution.contentId
+    ? 'Контент ' + attribution.contentId + ' / ' + channelLabel
+    : SOURCE_LABEL;
+  setIf_(pageProperties, bookingMap['Платформа / номер'], richTextProp_(platformText));
   setIf_(pageProperties, bookingMap['Имя клиента'], richTextProp_(safeText_(p.name)));
   setIf_(pageProperties, bookingMap['Контакт'], richTextProp_(safeText_(p.contactType) + ': ' + safeText_(p.contact)));
   setIf_(pageProperties, bookingMap['Тур'], richTextProp_(safeText_(p.tourTitle)));
   setIf_(pageProperties, bookingMap['Дата заявки'], dateProp_(new Date().toISOString().slice(0, 10)));
   setIf_(pageProperties, bookingMap['Интересы'], richTextProp_((p.interests || []).join(', ')));
 
-  // Make website leads immediately visible in the normal operational CRM views.
   setSchemaField_(pageProperties, bookingProperties, 'Статус', 'Ожидает оплаты');
   setSchemaField_(pageProperties, bookingProperties, 'Оплата', 'Не согласована');
   setSchemaField_(pageProperties, bookingProperties, 'Импорт требует внимания', true);
@@ -341,6 +409,28 @@ function createNotionRecord_(p) {
     : null;
   if (routePage && routePage.id) {
     pageProperties[relationName] = { relation: [{ id: routePage.id }] };
+  }
+
+  let contentLookup = null;
+  if (attribution.contentId && isRelationProperty_(bookingProperties, 'Контент')) {
+    try {
+      const contentSchema = notionGetDataSourceSchema_(token, contentSourceId);
+      const idSchema = contentSchema && contentSchema.properties ? contentSchema.properties['ID контента'] : null;
+      if (!idSchema || ['unique_id', 'auto_increment_id'].indexOf(idSchema.type) === -1) {
+        contentLookup = { matched: false, ambiguous: false, error: 'ID контента is missing or has an unexpected type' };
+      } else {
+        contentLookup = findContentPageById_(token, contentSourceId, attribution.contentId);
+      }
+    } catch (contentErr) {
+      contentLookup = {
+        matched: false,
+        ambiguous: false,
+        error: String(contentErr && contentErr.message ? contentErr.message : contentErr)
+      };
+    }
+    if (contentLookup && contentLookup.matched && contentLookup.id) {
+      pageProperties['Контент'] = { relation: [{ id: contentLookup.id }] };
+    }
   }
 
   const payload = {
@@ -368,9 +458,167 @@ function createNotionRecord_(p) {
     relationMatched: Boolean(routePage && routePage.matched),
     relationAmbiguous: Boolean(routePage && routePage.ambiguous),
     matchedRouteTitle: routePage && routePage.title ? routePage.title : null,
+    contentAttribution: buildContentAttributionResult_(attribution, contentLookup, sourceValue),
   };
 }
 
+function parseAttributionFromPageUrl_(pageUrl) {
+  const rawUrl = safeText_(pageUrl);
+  const result = {
+    pageUrl: rawUrl,
+    requested: false,
+    contentId: null,
+    rawContent: '',
+    channel: 'direct',
+    channelLabel: 'Прямой',
+    validContent: false,
+  };
+  if (!rawUrl) return result;
+
+  const questionIndex = rawUrl.indexOf('?');
+  if (questionIndex === -1) return result;
+  const hashIndex = rawUrl.indexOf('#', questionIndex + 1);
+  const query = rawUrl.slice(questionIndex + 1, hashIndex === -1 ? rawUrl.length : hashIndex);
+  const params = {};
+  query.split('&').forEach(function (pair) {
+    if (!pair) return;
+    const separator = pair.indexOf('=');
+    const rawKey = separator === -1 ? pair : pair.slice(0, separator);
+    const rawValue = separator === -1 ? '' : pair.slice(separator + 1);
+    const key = decodeQueryComponent_(rawKey).toLowerCase();
+    if (!Object.prototype.hasOwnProperty.call(params, key)) {
+      params[key] = decodeQueryComponent_(rawValue);
+    }
+  });
+
+  const rawContent = safeText_(params.content || '');
+  result.rawContent = rawContent;
+  result.requested = Boolean(rawContent);
+  if (/^\d+$/.test(rawContent)) {
+    const contentId = parseInt(rawContent, 10);
+    if (Number.isFinite(contentId) && contentId > 0) {
+      result.contentId = contentId;
+      result.validContent = true;
+    }
+  }
+
+  const rawChannel = safeText_(params.channel || '').toLowerCase();
+  result.channel = ATTRIBUTION_CHANNELS_.indexOf(rawChannel) !== -1 ? rawChannel : 'direct';
+  result.channelLabel = attributionChannelLabel_(result.channel);
+  return result;
+}
+
+function decodeQueryComponent_(value) {
+  try {
+    return decodeURIComponent(String(value || '').replace(/\+/g, ' '));
+  } catch (err) {
+    return String(value || '');
+  }
+}
+
+function attributionChannelLabel_(channel) {
+  const labels = {
+    telegram: 'Telegram',
+    instagram: 'Instagram',
+    vk: 'VK',
+    direct: 'Прямой',
+  };
+  return labels[channel] || labels.direct;
+}
+
+function attributionSourceValue_(channel) {
+  const sources = {
+    telegram: 'Telegram',
+    instagram: 'Instagram',
+    vk: 'Другое',
+    direct: 'Прямой',
+  };
+  return sources[channel] || sources.direct;
+}
+
+function buildContentAttributionResult_(attribution, contentLookup, sourceValue) {
+  const a = attribution || parseAttributionFromPageUrl_('');
+  const lookup = contentLookup || {};
+  return {
+    requested: Boolean(a.requested),
+    contentId: a.contentId || null,
+    validContent: Boolean(a.validContent),
+    rawContent: a.rawContent || '',
+    channel: a.channel || 'direct',
+    channelLabel: attributionChannelLabel_(a.channel || 'direct'),
+    sourceValue: sourceValue || attributionSourceValue_(a.channel || 'direct'),
+    matched: Boolean(lookup.matched),
+    ambiguous: Boolean(lookup.ambiguous),
+    matchedPageId: lookup.id || null,
+    matchedTitle: lookup.title || null,
+    error: lookup.error || null,
+  };
+}
+
+function pickSelectOption_(schema, candidates) {
+  if (!schema || schema.type !== 'select' || !schema.select || !Array.isArray(schema.select.options)) return null;
+  const existing = schema.select.options.map(function (option) { return safeText_(option && option.name); });
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = safeText_(candidates[i]);
+    if (candidate && existing.indexOf(candidate) !== -1) return candidate;
+  }
+  return null;
+}
+
+function setSelectIfOptionExists_(obj, properties, name, desiredValue) {
+  const selected = pickSelectOption_(properties && properties[name], [desiredValue]);
+  if (selected) obj[name] = selectProp_(selected);
+  return selected;
+}
+
+function findContentPageById_(token, contentSourceId, contentId) {
+  const id = parseInt(contentId, 10);
+  if (!Number.isFinite(id) || id <= 0) {
+    return { matched: false, ambiguous: false, id: null, title: null, error: 'Invalid content ID' };
+  }
+  const raw = notionQueryRawDataSource_(token, contentSourceId, {
+    page_size: 2,
+    filter: {
+      property: 'ID контента',
+      unique_id: { equals: id }
+    }
+  });
+  const results = raw && raw.results ? raw.results : [];
+  if (results.length === 1) {
+    return {
+      matched: true,
+      ambiguous: false,
+      id: results[0].id || null,
+      title: extractNotionTitle_(results[0].properties || {}),
+      error: null,
+    };
+  }
+  if (results.length > 1) {
+    return { matched: false, ambiguous: true, id: null, title: null, error: 'Multiple content records have the same ID' };
+  }
+  return { matched: false, ambiguous: false, id: null, title: null, error: null };
+}
+
+function extractNotionUniqueIdNumber_(property) {
+  if (!property) return null;
+  const payload = property.unique_id || property.auto_increment_id || null;
+  const number = payload && payload.number != null ? parseInt(payload.number, 10) : null;
+  return Number.isFinite(number) && number > 0 ? number : null;
+}
+
+function notionQueryRawDataSource_(token, dataSourceId, body) {
+  const response = UrlFetchApp.fetch('https://api.notion.com/v1/data_sources/' + encodeURIComponent(String(dataSourceId).replace(/^collection:\/\//, '')) + '/query', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: notionHeaders_(token),
+    payload: JSON.stringify(body || {}),
+    muteHttpExceptions: true,
+  });
+  const code = response.getResponseCode();
+  const txt = response.getContentText();
+  if (code < 200 || code >= 300) throw new Error('Notion query error ' + code + ': ' + txt);
+  return JSON.parse(txt || '{}');
+}
 function routeRelationRegressionCheck_(token, routesSourceId, titlePropertyName) {
   return {
     tsukiji: findRoutePage_(token, routesSourceId, titlePropertyName, 'Цукидзи + Гиндза'),
@@ -635,7 +883,8 @@ function setSchemaField_(obj, properties, name, value) {
   if (!schema) return;
 
   if (schema.type === 'select') {
-    obj[name] = selectProp_(value);
+    const selected = pickSelectOption_(schema, [value]);
+    if (selected) obj[name] = selectProp_(selected);
     return;
   }
   if (schema.type === 'status') {
