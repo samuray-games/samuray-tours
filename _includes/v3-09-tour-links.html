@@ -2,7 +2,7 @@
 (function(){
  var PARAM="tour";
  var syncingFromUrl=false;
- var maxOpenAttempts=24;
+ var maxOpenAttempts=30;
 
  function getUrl(){
   return new URL(window.location.href);
@@ -43,18 +43,24 @@
   return null;
  }
 
- function readMainDetailId(node){
+ function readDetailId(node){
   var button=findClickableAncestor(node);
   if(!button || !button.getAttribute){return "";}
+
+  var fallbackId=button.getAttribute("data-fallback-detail");
+  if(fallbackId){return fallbackId;}
+
   var raw=button.getAttribute("onclick")||"";
   var match=raw.match(/(?:window\.)?openTour\(\s*['\"]([^'\"]+)['\"]\s*\)/);
   return match?match[1]:"";
  }
 
- function findMainDetailButton(id){
-  var buttons=document.querySelectorAll("#grid button[onclick]");
+ function findDetailButton(id){
+  var grid=document.getElementById("grid");
+  if(!grid){return null;}
+  var buttons=grid.querySelectorAll("button,a");
   for(var i=0;i<buttons.length;i++){
-   if(readMainDetailId(buttons[i])===id){return buttons[i];}
+   if(readDetailId(buttons[i])===id){return buttons[i];}
   }
   return null;
  }
@@ -63,6 +69,7 @@
   if(target && target.id==="modal"){return true;}
   var node=target;
   while(node && node!==document){
+   if(node.getAttribute && node.getAttribute("data-full-close")!==null){return true;}
    if(node.classList && node.classList.contains("modal-close")){
     var parent=node.parentNode;
     while(parent && parent!==document){
@@ -80,6 +87,7 @@
   if(!button || !button.getAttribute){return false;}
   var raw=button.getAttribute("onclick")||"";
   return raw.indexOf("openApply(")!==-1 ||
+   button.getAttribute("data-full-apply")!==null ||
    button.getAttribute("data-detail-apply")!==null ||
    button.getAttribute("data-fallback-apply")!==null;
  }
@@ -108,7 +116,7 @@
    return;
   }
 
-  var button=findMainDetailButton(id);
+  var button=findDetailButton(id);
   if(!button){
    if((attempt||0)<maxOpenAttempts){
     window.setTimeout(function(){openFromLocation((attempt||0)+1);},50);
@@ -130,18 +138,18 @@
     closeDetailWithoutChangingUrl();
     writeTourParam(null,"replace");
    }
-  },0);
+  },20);
  }
 
- document.addEventListener("click",function(event){
-  var detailId=readMainDetailId(event.target);
+ window.addEventListener("click",function(event){
+  var detailId=readDetailId(event.target);
   if(detailId){
    if(!syncingFromUrl){
     window.setTimeout(function(){
      if(isFullDetailOpen() && getUrl().searchParams.get(PARAM)!==detailId){
       writeTourParam(detailId,"push");
      }
-    },0);
+    },20);
    }
    return;
   }
@@ -150,7 +158,7 @@
    if(!syncingFromUrl){
     window.setTimeout(function(){
      if(!isDetailOpen()){writeTourParam(null,"replace");}
-    },0);
+    },20);
    }
    return;
   }
@@ -161,7 +169,7 @@
     if(applyModal && applyModal.classList.contains("open")){
      writeTourParam(null,"replace");
     }
-   },0);
+   },20);
   }
  },true);
 
