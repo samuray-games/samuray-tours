@@ -1,191 +1,336 @@
 <script>
 (function(){
-  const seasonalCards=[
-    {
-      id:"hanami",
-      title:"Ханами Экспресс",
-      format:"Сезонный",
-      price:"5 900 ₽ с человека / 23 900 ₽ приватно",
-      tags:["season","3h","quiet","tradition"],
-      badges:["Сакура","Сезонный"],
-      desc:"Трёхчасовой маршрут по лучшим точкам сакуры с честной проверкой стадии цветения, потока и погоды перед датой.",
-      points:["Чидоригафути","Китаномару и Будокан","эталонная сакура Токио"],
-      duration:"3 часа",
-      forwhom:"Сакура, ханами, фотография, пары и семьи"
-    },
-    {
-      id:"momiji",
-      title:"Момидзи Экспресс",
-      format:"Сезонный",
-      price:"5 900 ₽ с человека / 23 900 ₽ приватно",
-      tags:["season","3h","quiet","tradition"],
-      badges:["Момидзи","Сезонный"],
-      desc:"Осенний маршрут по двум садам даймё с выбором лучших участков по фактической окраске листьев.",
-      points:["Коисикава Коракуэн","Рикугиэн","чайная пауза по ситуации"],
-      duration:"3 часа",
-      forwhom:"Осенние листья, сады, фотография, спокойный темп"
-    },
-    {
-      id:"season-express",
-      title:"Сезонный Tokyo Express",
-      format:"Сезонный",
-      price:"17 900 ₽",
-      tags:["season","3h","quiet","tradition"],
-      badges:["Сезонный","3 часа"],
-      desc:"Компактная прогулка по одной актуальной сезонной теме: цветы, летние символы, события или ранняя осень без ложных гарантий.",
-      points:["один район","одна сезонная тема","маршрут по погоде и календарю"],
-      duration:"3 часа",
-      forwhom:"Короткий сезонный маршрут, повторный визит, спокойная прогулка"
-    },
-    {
-      id:"season-special",
-      title:"Сезонный Tokyo Special",
-      format:"Сезонный",
-      price:"29 900 ₽",
-      tags:["season","full","quiet","tradition"],
-      badges:["Сезонный","Полный день"],
-      desc:"Полный день, который собирается под конкретный месяц и даты: природа, события, сезонные вкусы и план Б на погоду.",
-      points:["сезонная тема месяца","лучшие актуальные локации","окончательная программа ближе к дате"],
-      duration:"около 8 часов",
-      forwhom:"Глубокий сезонный день, природа, культура, повторный визит"
-    }
-  ];
+ var grid=document.getElementById("grid");
+ if(!grid){return;}
 
-  const extraCards=[
-    {
-      id:"karaoke",
-      title:"Караоке-вечер в Токио",
-      format:"Вечер",
-      price:"3 900 ₽ с человека / от 12 900 ₽ приватно",
-      tags:["night","modern","food"],
-      badges:["Караоке","Вечер"],
-      desc:"Три формата японского караоке за один вечер: комната с видом, классическая сеть и камерный бар в Голден Гае.",
-      points:["Сибуя и история караоке","две разные караоке-комнаты","финал в Голден Гае"],
-      duration:"3 часа",
-      forwhom:"Пары, компании, соло-гости, ночная культура без клубов"
-    },
-    {
-      id:"kawaguchiko",
-      title:"Кавагучико - тихая Япония у Фудзи",
-      format:"Выездной",
-      price:"34 900 ₽",
-      tags:["full","quiet","tradition"],
-      badges:["Фудзи","Выездной"],
-      desc:"Выезд к озеру Кавагучико за пейзажем, местной едой и спокойным ритмом. Вид на Фудзи зависит от погоды и не обещается как аттракцион по расписанию.",
-      points:["озеро Кавагучико","парк или канатная дорога по погоде","местная кухня и святилище"],
-      duration:"10-12 часов с дорогой",
-      forwhom:"Фудзи, природа, фотография, спокойный полный день"
-    },
-    {
-      id:"kamakura",
-      title:"Камакура",
-      format:"Выездной",
-      price:"29 900 ₽",
-      tags:["full","quiet","tradition","family"],
-      badges:["История","Выездной"],
-      desc:"День в бывшей столице воинов: Великий Будда, храм Хасэдэра, океан, святилище Хатимангу и улицы современной Камакуры.",
-      points:["Великий Будда и Хасэдэра","пляж Юигахама","Цуругаока Хатимангу и Комати-дори"],
-      duration:"8 часов",
-      forwhom:"Самурайская история, храмы, океан, пары и семьи"
-    }
-  ];
-
-  const managedIds=new Set(["season","hanami","momiji","season-express","season-special","karaoke","kawaguchiko","kamakura"]);
-  for(let i=tours.length-1;i>=0;i--){
-    if(managedIds.has(tours[i].id)) tours.splice(i,1);
+ var managedTours=[
+  {
+   id:"hanami",title:"Ханами Экспресс",price:"5 900 ₽ с человека / 23 900 ₽ приватно",duration:"3 часа",format:"Сезонный",
+   tags:["season","3h","quiet","tradition"],
+   desc:"Трёхчасовой маршрут по лучшим точкам сакуры с честной проверкой стадии цветения, потока и погоды перед датой.",
+   points:["Чидоригафути","Китаномару и Будокан","эталонная сакура Токио"]
+  },
+  {
+   id:"momiji",title:"Момидзи Экспресс",price:"5 900 ₽ с человека / 23 900 ₽ приватно",duration:"3 часа",format:"Сезонный",
+   tags:["season","3h","quiet","tradition"],
+   desc:"Осенний маршрут по двум садам даймё с выбором лучших участков по фактической окраске листьев.",
+   points:["Коисикава Коракуэн","Рикугиэн","чайная пауза по ситуации"]
+  },
+  {
+   id:"season-express",title:"Сезонный Tokyo Express",price:"17 900 ₽",duration:"3 часа",format:"Сезонный",
+   tags:["season","3h","quiet","tradition"],
+   desc:"Компактная прогулка по одной актуальной сезонной теме без ложных гарантий цветения и погоды.",
+   points:["один район","одна сезонная тема","маршрут по погоде и календарю"]
+  },
+  {
+   id:"season-special",title:"Сезонный Tokyo Special",price:"29 900 ₽",duration:"около 8 часов",format:"Сезонный",
+   tags:["season","full","quiet","tradition"],
+   desc:"Полный день под конкретный месяц и даты: природа, события, сезонные вкусы и содержательный план Б.",
+   points:["сезонная тема месяца","лучшие актуальные локации","окончательная программа ближе к дате"]
+  },
+  {
+   id:"karaoke",title:"Караоке-вечер в Токио",price:"3 900 ₽ с человека / от 12 900 ₽ приватно",duration:"3 часа",format:"Вечер",
+   tags:["night","modern","food"],
+   desc:"Три формата японского караоке за один вечер: комната с видом, классическая сеть и камерный бар.",
+   points:["Сибуя и история караоке","две разные караоке-комнаты","финал в Голден Гае"]
+  },
+  {
+   id:"kawaguchiko",title:"Кавагучико - тихая Япония у Фудзи",price:"34 900 ₽",duration:"10-12 часов с дорогой",format:"Выездной",
+   tags:["full","quiet","tradition"],
+   desc:"Выезд к озеру Кавагучико за пейзажем, местной едой и спокойным ритмом. Вид на Фудзи зависит от погоды.",
+   points:["озеро Кавагучико","парк или канатная дорога по погоде","местная кухня и святилище"]
+  },
+  {
+   id:"kamakura",title:"Камакура",price:"29 900 ₽",duration:"8 часов",format:"Выездной",
+   tags:["full","quiet","tradition","family"],
+   desc:"День в бывшей столице воинов: Великий Будда, Хасэдэра, океан, Хатимангу и улицы современной Камакуры.",
+   points:["Великий Будда и Хасэдэра","пляж Юигахама","Цуругаока Хатимангу и Комати-дори"]
   }
+ ];
 
-  const shinjukuIndex=tours.findIndex(t=>t.id==="shinjuku");
-  const seasonalInsertIndex=shinjukuIndex>=0?shinjukuIndex:Math.min(8,tours.length);
-  tours.splice(seasonalInsertIndex,0,...seasonalCards);
+ var managedDetails={
+  "hanami":{
+   title:"Ханами Экспресс",price:"5 900 ₽ с человека / 23 900 ₽ приватно",duration:"3 часа",forwhom:"Сакура, ханами, фотография, пары и семьи",
+   story:"Ханами Экспресс - отдельный весенний продукт. Маршрут подтверждается по фактической стадии сакуры, погоде и схеме движения.",
+   route:[
+    ["Чидоригафути","Сакура вдоль рва бывшего замка Эдо, отражения, культура ханами и организация сезонного потока."],
+    ["Китаномару и Будокан","Историческая территория, послевоенный парк, Будокан и ворота Таясумон."],
+    ["Ясукуни и эталонное дерево","Нейтральный исторический контекст и официальная методика объявления цветения в Токио."]
+   ],
+   included:"Трёхчасовая частная прогулка, проверка текущей стадии сезона, адаптация порядка точек и помощь с фотографиями.",
+   extra:"Транспорт, еда, напитки, лодка и платные активности оплачиваются отдельно.",
+   tips:"Пик цветения, лодка, подсветка и свободное движение не гарантируются. Стартовая точка подтверждается по актуальной схеме потока."
+  },
+  "momiji":{
+   title:"Момидзи Экспресс",price:"5 900 ₽ с человека / 23 900 ₽ приватно",duration:"3 часа",forwhom:"Осенние листья, сады, фотография, спокойный темп",
+   story:"Момидзи Экспресс сравнивает два сада даймё. Порядок и длительность остановок меняются по фактической окраске листьев.",
+   route:[
+    ["Коисикава Коракуэн","Китайские и японские пейзажные цитаты, пруд, мосты и лучший осенний участок дня."],
+    ["Переезд к Комагомэ","Реальный транспортный блок между садами, включённый в трёхчасовую логику."],
+    ["Рикугиэн","Поэзия вака, последовательность скрытых видов, осенние участки и чайная при приемлемой очереди."]
+   ],
+   included:"Частная прогулка, актуальная проверка обоих садов и адаптация маршрута под темп группы.",
+   extra:"Входные билеты, транспорт, маття, вагаси и другие личные расходы оплачиваются отдельно.",
+   tips:"Точный пик, обе чайные и ночная подсветка не гарантируются."
+  },
+  "season-express":{
+   title:"Сезонный Tokyo Express",price:"17 900 ₽",duration:"3 часа",forwhom:"Короткий сезонный маршрут, повторный визит, спокойная прогулка",
+   story:"Сезонный Tokyo Express - короткий маршрут по одной теме и одному району. Он работает круглый год, но не заменяет Ханами и Момидзи Экспресс.",
+   route:[
+    ["Выбор сезонной редакции","Ближе к дате определяется лучший район и тема по цветению, событию, погоде и времени суток."],
+    ["Три часа без гонки","Один компактный район, культурная линия и сезонные детали вместо попытки объехать весь город."],
+    ["Погодная адаптация","Жара, дождь, ветер и временные закрытия заранее меняют порядок открытых блоков."]
+   ],
+   included:"Трёхчасовой приватный маршрут, подготовка сезонной концепции и план Б.",
+   extra:"Транспорт, еда, напитки, билеты и покупки оплачиваются отдельно.",
+   tips:"Сакура и красные клёны бронируются как отдельные Ханами Экспресс и Момидзи Экспресс."
+  },
+  "season-special":{
+   title:"Сезонный Tokyo Special",price:"29 900 ₽",duration:"около 8 часов",forwhom:"Глубокий сезонный день, природа, культура, повторный визит",
+   story:"Сезонный Tokyo Special - полный день, который собирается под месяц и конкретные даты.",
+   route:[
+    ["Предварительная сезонная концепция","После запроса определяется тема месяца и несколько подходящих вариантов."],
+    ["Фактический маршрут","За 7-10 дней и затем за 24-48 часов проверяются природа, события, билеты, погода и ограничения."],
+    ["Полный день с резервами","Программа включает паузы, транспортную логику и содержательный план Б."]
+   ],
+   included:"Около восьми часов частного сопровождения, сезонная подготовка и адаптация под группу.",
+   extra:"Транспорт, питание, напитки, входные билеты и специальные события оплачиваются отдельно.",
+   tips:"Конкретные цветы, фестивали, подсветки и пик окраски подтверждаются ближе к дате."
+  },
+  "karaoke":{
+   title:"Караоке-вечер в Токио",price:"3 900 ₽ с человека / от 12 900 ₽ приватно",duration:"3 часа",forwhom:"Пары, компании, соло-гости, ночная культура без клубов",
+   story:"Это знакомство с японской культурой караоке, а не урок вокала. За вечер меняются три разных формата.",
+   route:[
+    ["Встреча у Хатико","Знакомство, история караоке и объяснение японского формата приватных комнат."],
+    ["Две караоке-комнаты в Сибуе","Разные сети, пульты, выбор песен и культурный контекст."],
+    ["Голден Гай","Финал в небольшом караоке-баре. Пение и алкоголь полностью добровольны."]
+   ],
+   included:"Трёхчасовое сопровождение, помощь с системой караоке, культурный контекст и перевод при необходимости.",
+   extra:"Комнаты, напитки, еда, транспорт и cover charge оплачиваются отдельно.",
+   tips:"Конкретные комнаты, вид из окна и финальный бар подтверждаются перед бронированием."
+  },
+  "kawaguchiko":{
+   title:"Кавагучико - тихая Япония у Фудзи",price:"34 900 ₽",duration:"10-12 часов с дорогой",forwhom:"Фудзи, природа, фотография, спокойный полный день",
+   story:"Выезд к Фудзи построен не как охота за обязательной открыткой, а как день у озера с природой, местной едой и спокойным ритмом.",
+   route:[
+    ["Озеро Кавагучико","Берег, отражения и выбор лучших точек по свету и видимости."],
+    ["Парк, канатная дорога или музей","Вариант выбирается по погоде, ветру, сезону и очередям."],
+    ["Местная Яманаси","Хото, святилище или восстановленная деревня в зависимости от транспорта и темпа группы."]
+   ],
+   included:"Локальная программа 6-7 часов, подготовка транспортной схемы и адаптация маршрута по погоде.",
+   extra:"Проезд из Токио, местный транспорт, входы, питание и напитки оплачиваются отдельно.",
+   tips:"Вид на Фудзи не гарантируется. Обратные билеты и транспортный каркас подтверждаются заранее."
+  },
+  "kamakura":{
+   title:"Камакура",price:"29 900 ₽",duration:"8 часов",forwhom:"Самурайская история, храмы, океан, пары и семьи",
+   story:"Камакура соединяет первую военную столицу, буддийские храмы, синтоистскую власть, локальный поезд и океан.",
+   route:[
+    ["Энодэн, Великий Будда и Хасэдэра","История сёгуната, буддизм, Каннон, сезонный сад и виды на побережье."],
+    ["Юигахама и обед","Океанский блок сокращается при плохой погоде, а обед подбирается под очередь и ограничения группы."],
+    ["Цуругаока Хатимангу и Комати-дори","Святилище воинской власти, городская ось и современная торговая улица Камакуры."]
+   ],
+   included:"Восемь часов частного сопровождения, исторический рассказ и адаптация дня под погоду и группу.",
+   extra:"Транспорт до Камакуры и внутри города, входные билеты, еда и напитки оплачиваются отдельно.",
+   tips:"Гортензии, вход внутрь Великого Будды, море и рестораны проверяются перед конкретной датой."
+  }
+ };
 
-  const karaokeAfter=tours.findIndex(t=>t.id==="shinjuku");
-  tours.splice(karaokeAfter>=0?karaokeAfter+1:tours.length,0,extraCards[0]);
+ var applying=false;
+ var observer=null;
 
-  const odaibaIndex=tours.findIndex(t=>t.id==="odaiba");
-  tours.splice(odaibaIndex>=0?odaibaIndex+1:tours.length,0,extraCards[1],extraCards[2]);
+ function esc(value){
+  return String(value||"").replace(/[&<>\"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#039;"}[c];});
+ }
 
-  delete tourDetails.season;
-  Object.assign(tourDetails,{
-    "hanami":{
-      story:"Ханами Экспресс - отдельный весенний продукт, а не универсальная прогулка с розовыми обещаниями. Маршрут подтверждается по фактической стадии сакуры, погоде и схеме движения.",
-      route:[
-        ["Чидоригафути","Сакура вдоль рва бывшего замка Эдо, отражения, культура ханами и организация сезонного потока."],
-        ["Китаномару и Будокан","Историческая территория, послевоенный парк, Будокан и ворота Таясумон."],
-        ["Ясукуни и эталонное дерево","Нейтральный исторический контекст и официальная методика объявления цветения в Токио."]
-      ],
-      included:"Трёхчасовая частная прогулка, проверка текущей стадии сезона, адаптация порядка точек и помощь с фотографиями.",
-      extra:"Транспорт, еда, напитки, лодка и любые платные активности оплачиваются отдельно.",
-      tips:"Пик цветения, лодка, подсветка и свободное движение не гарантируются. Стартовая точка подтверждается по актуальной схеме потока."
-    },
-    "momiji":{
-      story:"Момидзи Экспресс сравнивает два сада даймё и два способа работать с осенним пейзажем. Порядок и длительность остановок меняются по фактической окраске листьев.",
-      route:[
-        ["Коисикава Коракуэн","Китайские и японские пейзажные цитаты, пруд, мосты и лучший осенний участок дня."],
-        ["Переезд к Комагомэ","Реальный транспортный блок между садами, который уже включён в трёхчасовую логику."],
-        ["Рикугиэн","Поэзия вака, последовательность скрытых видов, осенние участки и чайная при приемлемой очереди."]
-      ],
-      included:"Частная прогулка, актуальная проверка обоих садов и адаптация маршрута под темп группы.",
-      extra:"Входные билеты, транспорт, маття, вагаси и другие личные расходы оплачиваются отдельно.",
-      tips:"Точный пик, обе чайные и ночная подсветка не гарантируются. Для гостей с ограниченной мобильностью маршрут упрощается."
-    },
-    "season-express":{
-      story:"Сезонный Tokyo Express - короткий маршрут по одной теме и одному району. Он работает круглый год, но не заменяет отдельные более дорогие продукты Ханами и Момидзи Экспресс.",
-      route:[
-        ["Выбор сезонной редакции","Ближе к дате определяется лучший район и тема по цветению, событию, погоде и времени суток."],
-        ["Три часа без гонки","Один компактный район, культурная линия и сезонные детали вместо попытки объехать весь город."],
-        ["Погодная адаптация","Жара, дождь, ветер и временные закрытия заранее меняют порядок и длительность открытых блоков."]
-      ],
-      included:"Трёхчасовой приватный маршрут, подготовка сезонной концепции и план Б.",
-      extra:"Транспорт, еда, напитки, билеты и покупки оплачиваются отдельно.",
-      tips:"Сакура и красные клёны бронируются только как отдельные Ханами Экспресс и Момидзи Экспресс."
-    },
-    "season-special":{
-      story:"Сезонный Tokyo Special - полный день, который собирается под месяц и конкретные даты. Зимой это может быть ясный свет и сады, летом - ранние лотосы и вечерние события, осенью - вкусы, гинкго и клёны.",
-      route:[
-        ["Предварительная сезонная концепция","После запроса определяется тема месяца и несколько подходящих вариантов."],
-        ["Фактический маршрут","За 7-10 дней и затем за 24-48 часов проверяются природа, события, билеты, погода и ограничения."],
-        ["Полный день с резервами","Основная программа включает паузы, транспортную логику и содержательный план Б, а не случайную замену точек."]
-      ],
-      included:"Около восьми часов частного сопровождения, сезонная подготовка, актуализация программы и адаптация под группу.",
-      extra:"Транспорт, питание, напитки, входные билеты и специальные события оплачиваются отдельно.",
-      tips:"Конкретные цветы, фестивали, подсветки и пик окраски подтверждаются ближе к дате и не гарантируются заранее."
-    },
-    "karaoke":{
-      story:"Это знакомство с японской культурой караоке, а не урок вокала. За вечер меняются три формата: просторная комната, классическая сеть и маленький бар.",
-      route:[
-        ["Встреча у Хатико","Знакомство, история караоке и объяснение японского формата приватных комнат."],
-        ["Две караоке-комнаты в Сибуе","Разные сети, пульты, выбор песен и отсылка к Lost in Translation без обещания несуществующей той самой комнаты."],
-        ["Голден Гай","Финал в небольшом караоке-баре. Пение и алкоголь полностью добровольны."]
-      ],
-      included:"Трёхчасовое сопровождение, помощь с системой караоке, культурный контекст и перевод при необходимости.",
-      extra:"Комнаты, напитки, еда, транспорт, вход или cover charge в баре оплачиваются отдельно.",
-      tips:"Конкретные комнаты, вид из окна и финальный бар подтверждаются перед бронированием."
-    },
-    "kawaguchiko":{
-      story:"Выезд к Фудзи построен не как охота за обязательной открыткой, а как день у озера с природой, местной едой и спокойным ритмом. Гора может скрыться за облаками.",
-      route:[
-        ["Озеро Кавагучико","Берег, отражения и выбор лучших точек по свету и видимости."],
-        ["Парк, канатная дорога или музей","Один из вариантов выбирается по погоде, ветру, сезону и очередям."],
-        ["Местная Яманаси","Хото, святилище или восстановленная деревня в зависимости от транспорта и темпа группы."]
-      ],
-      included:"Локальная программа 6-7 часов, подготовка транспортной схемы и адаптация маршрута по погоде.",
-      extra:"Проезд из Токио, местный транспорт, входы, питание и напитки оплачиваются отдельно.",
-      tips:"Вид на Фудзи не гарантируется. Обратные билеты и транспортный каркас подтверждаются заранее."
-    },
-    "kamakura":{
-      story:"Камакура соединяет первую военную столицу, буддийские храмы, синтоистскую власть, локальный поезд и океан. Это полноценный выездной день, а не набор трёх популярных фотографий.",
-      route:[
-        ["Энодэн, Великий Будда и Хасэдэра","История сёгуната, буддизм, Каннон, сезонный сад и виды на побережье."],
-        ["Юигахама и обед","Океанский блок сокращается при плохой погоде, а обед подбирается под очередь и ограничения группы."],
-        ["Цуругаока Хатимангу и Комати-дори","Святилище воинской власти, городская ось и современная торговая улица Камакуры."]
-      ],
-      included:"Восемь часов частного сопровождения, исторический рассказ и адаптация дня под погоду и группу.",
-      extra:"Транспорт до Камакуры и внутри города, входные билеты, еда и напитки оплачиваются отдельно.",
-      tips:"Гортензийная дорожка, вход внутрь Великого Будды, море и рестораны проверяются перед конкретной датой."
+ function findAttrTarget(start,attr){
+  var node=start;
+  while(node && node!==document){
+   if(node.getAttribute && node.getAttribute(attr)!==null){return node;}
+   node=node.parentNode;
+  }
+  return null;
+ }
+
+ function findCard(id){
+  var buttons=grid.querySelectorAll("[data-fallback-detail],[data-catalog25-detail]");
+  for(var i=0;i<buttons.length;i++){
+   var buttonId=buttons[i].getAttribute("data-fallback-detail")||buttons[i].getAttribute("data-catalog25-detail");
+   if(buttonId===id){
+    var node=buttons[i];
+    while(node && node!==grid){
+     if(node.classList && node.classList.contains("card")){return node;}
+     node=node.parentNode;
     }
-  });
+   }
+  }
+  return null;
+ }
 
-  if(typeof renderTours==="function") renderTours();
+ function currentFilter(){
+  var active=document.querySelector("[data-fallback-filter].active");
+  return active ? active.getAttribute("data-fallback-filter") : "all";
+ }
+
+ function matchesFilter(t,filter){
+  return filter==="all" || t.tags.indexOf(filter)!==-1;
+ }
+
+ function buildCard(t){
+  var points="";
+  for(var i=0;i<t.points.length;i++){points+="<li>"+esc(t.points[i])+"</li>";}
+  var wrapper=document.createElement("div");
+  wrapper.innerHTML=
+   "<article class=\"card\" data-catalog25-card=\""+esc(t.id)+"\">"+
+    "<h3>"+esc(t.title)+"</h3>"+
+    "<p class=\"desc\">"+esc(t.desc)+"</p>"+
+    "<ul class=\"points\">"+points+"</ul>"+
+    "<div class=\"meta\"><span>"+esc(t.duration)+"</span><span>"+esc(t.format)+"</span></div>"+
+    "<div class=\"price\">"+esc(t.price)+"</div>"+
+    "<div class=\"card-actions\"><button class=\"btn btn-secondary\" type=\"button\" data-catalog25-detail=\""+esc(t.id)+"\">Подробнее</button>"+
+    "<button class=\"btn btn-primary\" type=\"button\" data-catalog25-apply=\""+esc(t.id)+"\">Оставить заявку</button></div>"+
+   "</article>";
+  return wrapper.firstElementChild;
+ }
+
+ function insertSeasonal(filter){
+  var reference=findCard("shinjuku");
+  for(var i=0;i<4;i++){
+   var t=managedTours[i];
+   if(!matchesFilter(t,filter)){continue;}
+   var card=buildCard(t);
+   if(reference){grid.insertBefore(card,reference);}else{grid.appendChild(card);}
+  }
+ }
+
+ function insertKaraoke(filter){
+  var t=managedTours[4];
+  if(!matchesFilter(t,filter)){return;}
+  var shinjuku=findCard("shinjuku");
+  var card=buildCard(t);
+  if(shinjuku && shinjuku.nextSibling){grid.insertBefore(card,shinjuku.nextSibling);}
+  else if(shinjuku){grid.appendChild(card);}
+  else{grid.appendChild(card);}
+ }
+
+ function insertExcursions(filter){
+  var anchor=findCard("odaiba");
+  for(var i=5;i<managedTours.length;i++){
+   var t=managedTours[i];
+   if(!matchesFilter(t,filter)){continue;}
+   var card=buildCard(t);
+   if(anchor && anchor.nextSibling){grid.insertBefore(card,anchor.nextSibling);}
+   else{grid.appendChild(card);}
+   anchor=card;
+  }
+ }
+
+ function updateCount(){
+  var count=document.getElementById("count");
+  if(!count){return;}
+  var total=grid.querySelectorAll(".card").length;
+  count.textContent=total+" "+(total===1?"маршрут":"маршрутов");
+ }
+
+ function patchGrid(){
+  if(applying){return;}
+  applying=true;
+  if(observer){observer.disconnect();}
+  try{
+   var custom=grid.querySelectorAll("[data-catalog25-card]");
+   for(var i=0;i<custom.length;i++){custom[i].remove();}
+   var legacy=findCard("season");
+   if(legacy){legacy.remove();}
+   var filter=currentFilter();
+   insertSeasonal(filter);
+   insertKaraoke(filter);
+   insertExcursions(filter);
+   updateCount();
+  }finally{
+   if(observer){observer.observe(grid,{childList:true});}
+   applying=false;
+  }
+ }
+
+ function writeTourParam(id,mode){
+  var url=new URL(window.location.href);
+  if(id){url.searchParams.set("tour",id);}else{url.searchParams.delete("tour");}
+  var next=url.pathname+(url.search||"")+(url.hash||"");
+  window.history[mode==="push"?"pushState":"replaceState"]({tour:id||null},"",next);
+ }
+
+ function openDetail(id){
+  var d=managedDetails[id];
+  if(!d){return;}
+  var modal=document.getElementById("modal");
+  var content=document.getElementById("modalContent");
+  if(!modal || !content){return;}
+  var route="";
+  for(var i=0;i<d.route.length;i++){
+   route+="<li><b>"+esc(d.route[i][0])+"</b><span>"+esc(d.route[i][1])+"</span></li>";
+  }
+  content.innerHTML=
+   "<h2>"+esc(d.title)+"</h2>"+
+   "<p class=\"lead\">"+esc(d.story)+"</p>"+
+   "<div class=\"modal-grid\">"+
+    "<div class=\"info\"><small>Длительность</small><b>"+esc(d.duration)+"</b></div>"+
+    "<div class=\"info\"><small>Стоимость</small><b>"+esc(d.price)+"</b></div>"+
+    "<div class=\"info\"><small>Кому подойдёт</small><b>"+esc(d.forwhom)+"</b></div>"+
+    "<div class=\"info\"><small>Формат</small><b>Частная экскурсия</b></div>"+
+   "</div>"+
+   "<div class=\"detail-section\"><h3>Как проходит маршрут</h3><ul class=\"route-list\">"+route+"</ul></div>"+
+   "<div class=\"detail-section\"><h3>Что входит</h3><p>"+esc(d.included)+"</p></div>"+
+   "<div class=\"detail-section\"><h3>Дополнительные расходы</h3><p>"+esc(d.extra)+"</p></div>"+
+   "<div class=\"detail-section\"><h3>Важно знать</h3><p>"+esc(d.tips)+"</p></div>"+
+   "<div class=\"modal-actions\"><button class=\"btn btn-primary\" type=\"button\" data-catalog25-apply=\""+esc(id)+"\">Оставить заявку</button><button class=\"btn btn-secondary\" type=\"button\" data-full-close=\"1\">Закрыть</button></div>";
+  modal.classList.add("open");
+  document.body.style.overflow="hidden";
+  var current=new URL(window.location.href).searchParams.get("tour");
+  if(current!==id){writeTourParam(id,"push");}
+ }
+
+ function openApply(id){
+  var t=null;
+  for(var i=0;i<managedTours.length;i++){if(managedTours[i].id===id){t=managedTours[i];break;}}
+  if(!t){return;}
+  var detailModal=document.getElementById("modal");
+  if(detailModal){detailModal.classList.remove("open");}
+  if(typeof window.openApply==="function"){window.openApply("");}
+  var tourId=document.getElementById("tourId");
+  var tourTitle=document.getElementById("tourTitle");
+  var tourPrice=document.getElementById("tourPrice");
+  var badge=document.getElementById("selectedTourBadge");
+  var summary=document.getElementById("summaryTour");
+  var summaryPrice=document.getElementById("summaryPrice");
+  if(tourId){tourId.value=t.id;}
+  if(tourTitle){tourTitle.value=t.title;}
+  if(tourPrice){tourPrice.value=t.price;}
+  if(badge){badge.textContent=t.title;}
+  if(summary){summary.textContent=t.title;}
+  if(summaryPrice){summaryPrice.textContent=t.price;}
+  writeTourParam(null,"replace");
+ }
+
+ document.addEventListener("click",function(event){
+  var detail=findAttrTarget(event.target,"data-catalog25-detail");
+  if(detail){
+   event.preventDefault();
+   event.stopPropagation();
+   if(event.stopImmediatePropagation){event.stopImmediatePropagation();}
+   openDetail(detail.getAttribute("data-catalog25-detail"));
+   return;
+  }
+  var apply=findAttrTarget(event.target,"data-catalog25-apply");
+  if(apply){
+   event.preventDefault();
+   event.stopPropagation();
+   if(event.stopImmediatePropagation){event.stopImmediatePropagation();}
+   openApply(apply.getAttribute("data-catalog25-apply"));
+  }
+ },true);
+
+ observer=new MutationObserver(function(){window.setTimeout(patchGrid,0);});
+ observer.observe(grid,{childList:true});
+ patchGrid();
+ window.__samurayCatalog25={patch:patchGrid,tours:managedTours.slice()};
 })();
 </script>
