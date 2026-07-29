@@ -1,0 +1,58 @@
+name: Patch VK attribution source
+
+on:
+  push:
+    branches:
+      - feature/content-attribution-v1
+    paths:
+      - .github/workflows/patch-vk-source.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/content-attribution-v1
+          fetch-depth: 0
+
+      - name: Update VK source mapping
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          code_path = Path('backend/Code.gs')
+          code = code_path.read_text(encoding='utf-8')
+          old = "    vk: 'Другое',"
+          new = "    vk: 'VK',"
+          if code.count(old) != 1:
+              raise SystemExit(f'Expected exactly one VK fallback mapping, found {code.count(old)}')
+          code_path.write_text(code.replace(old, new, 1), encoding='utf-8')
+
+          readme_path = Path('README.md')
+          readme = readme_path.read_text(encoding='utf-8')
+          anchor = "- `direct`\n"
+          note = "\nДля `channel=vk` backend записывает `Источник = VK` и сохраняет `Платформа / номер` в формате `Контент 123 / VK`.\n"
+          if note.strip() not in readme:
+              if anchor not in readme:
+                  raise SystemExit('README attribution channel anchor not found')
+              readme = readme.replace(anchor, anchor + note, 1)
+              readme_path.write_text(readme, encoding='utf-8')
+          PY
+
+      - name: Syntax check
+        run: |
+          cp backend/Code.gs /tmp/Code.js
+          node --check /tmp/Code.js
+
+      - name: Commit patch and remove temporary workflow
+        run: |
+          rm .github/workflows/patch-vk-source.yml
+          git config user.name "samuray-tours-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Use dedicated VK booking source"
+          git push origin HEAD:feature/content-attribution-v1
