@@ -530,7 +530,7 @@ function attributionSourceValue_(channel) {
   const sources = {
     telegram: 'Telegram',
     instagram: 'Instagram',
-    vk: 'Другое',
+    vk: 'VK',
     direct: 'Прямой',
   };
   return sources[channel] || sources.direct;
