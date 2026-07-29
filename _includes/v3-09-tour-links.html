@@ -1,0 +1,85 @@
+<script>
+(function(){
+ var PARAM="tour";
+ var baseOpenTour=typeof window.openTour==="function"?window.openTour:null;
+ var baseCloseModal=typeof window.closeModal==="function"?window.closeModal:null;
+ var baseOpenApply=typeof window.openApply==="function"?window.openApply:null;
+ var syncingFromUrl=false;
+
+ function getUrl(){
+  return new URL(window.location.href);
+ }
+
+ function getModal(){
+  return document.getElementById("modal");
+ }
+
+ function isDetailOpen(){
+  var modal=getModal();
+  return Boolean(modal && modal.classList.contains("open"));
+ }
+
+ function writeTourParam(id,mode){
+  var url=getUrl();
+  if(id){url.searchParams.set(PARAM,id);}else{url.searchParams.delete(PARAM);}
+  var next=url.pathname+(url.search||"")+(url.hash||"");
+  var method=mode==="push"?"pushState":"replaceState";
+  window.history[method]({tour:id||null},"",next);
+ }
+
+ function openFromLocation(){
+  if(!baseOpenTour){return;}
+  var id=getUrl().searchParams.get(PARAM);
+
+  if(!id){
+   if(isDetailOpen() && baseCloseModal){
+    syncingFromUrl=true;
+    try{baseCloseModal();}finally{syncingFromUrl=false;}
+   }
+   return;
+  }
+
+  syncingFromUrl=true;
+  try{
+   baseOpenTour(id);
+   if(!isDetailOpen()){
+    writeTourParam(null,"replace");
+   }
+  }finally{
+   syncingFromUrl=false;
+  }
+ }
+
+ if(baseOpenTour){
+  window.openTour=function(id){
+   var result=baseOpenTour.apply(this,arguments);
+   if(!syncingFromUrl && isDetailOpen()){
+    writeTourParam(String(id||""),"push");
+   }
+   return result;
+  };
+ }
+
+ if(baseCloseModal){
+  window.closeModal=function(){
+   var result=baseCloseModal.apply(this,arguments);
+   if(!syncingFromUrl){writeTourParam(null,"replace");}
+   return result;
+  };
+ }
+
+ if(baseOpenApply){
+  window.openApply=function(){
+   if(!syncingFromUrl){writeTourParam(null,"replace");}
+   return baseOpenApply.apply(this,arguments);
+  };
+ }
+
+ window.addEventListener("popstate",openFromLocation);
+ if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",function(){setTimeout(openFromLocation,0);},{once:true});
+ }else{
+  setTimeout(openFromLocation,0);
+ }
+})();
+</script>
