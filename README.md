@@ -60,13 +60,17 @@ Backend находится в:
 
 Заявку можно связать с публикацией в базе `Контент SamuRay Tours`, добавив к URL каталога параметры `content` и `channel`.
 
-Примеры:
+Параметры `content` и `channel` отвечают только за атрибуцию. Чтобы ссылка сразу раскрывала конкретную экскурсию, добавляется параметр `tour` с ID тура.
 
-- `?content=123&channel=telegram`
-- `?content=123&channel=instagram`
-- `?content=123&channel=vk`
+Примеры полной ссылки на `3D Токио`:
 
-`content` - положительное целое число из свойства `ID контента`.
+- `https://samuray-games.github.io/samuray-tours/?tour=3d&content=123&channel=telegram`
+- `https://samuray-games.github.io/samuray-tours/?tour=3d&content=123&channel=instagram`
+- `https://samuray-games.github.io/samuray-tours/?tour=3d&content=123&channel=vk`
+
+Ссылка без `tour`, например `?content=123&channel=telegram`, открывает общий каталог и сохраняет атрибуцию для последующей заявки, но не выбирает экскурсию автоматически.
+
+`content` - положительное целое число из свойства `ID контента` без префикса `CT-`.
 
 Допустимые значения `channel`:
 
@@ -89,4 +93,3 @@ Fallback data source ID:
 
 - `TEST_PARSE_ATTRIBUTION`
 - `TEST_CONTENT_LOOKUP`
-
