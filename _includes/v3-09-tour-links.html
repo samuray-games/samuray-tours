@@ -1,0 +1,176 @@
+<script>
+(function(){
+ var PARAM="tour";
+ var syncingFromUrl=false;
+ var maxOpenAttempts=24;
+
+ function getUrl(){
+  return new URL(window.location.href);
+ }
+
+ function getModal(){
+  return document.getElementById("modal");
+ }
+
+ function getModalContent(){
+  return document.getElementById("modalContent");
+ }
+
+ function isDetailOpen(){
+  var modal=getModal();
+  return Boolean(modal && modal.classList.contains("open"));
+ }
+
+ function isFullDetailOpen(){
+  var content=getModalContent();
+  return Boolean(isDetailOpen() && content && content.querySelector(".route-list"));
+ }
+
+ function writeTourParam(id,mode){
+  var url=getUrl();
+  if(id){url.searchParams.set(PARAM,id);}else{url.searchParams.delete(PARAM);}
+  var next=url.pathname+(url.search||"")+(url.hash||"");
+  var method=mode==="push"?"pushState":"replaceState";
+  window.history[method]({tour:id||null},"",next);
+ }
+
+ function findClickableAncestor(start){
+  var node=start;
+  while(node && node!==document){
+   if(node.tagName==="BUTTON" || node.tagName==="A"){return node;}
+   node=node.parentNode;
+  }
+  return null;
+ }
+
+ function readMainDetailId(node){
+  var button=findClickableAncestor(node);
+  if(!button || !button.getAttribute){return "";}
+  var raw=button.getAttribute("onclick")||"";
+  var match=raw.match(/(?:window\.)?openTour\(\s*['\"]([^'\"]+)['\"]\s*\)/);
+  return match?match[1]:"";
+ }
+
+ function findMainDetailButton(id){
+  var buttons=document.querySelectorAll("#grid button[onclick]");
+  for(var i=0;i<buttons.length;i++){
+   if(readMainDetailId(buttons[i])===id){return buttons[i];}
+  }
+  return null;
+ }
+
+ function isModalCloseClick(target){
+  if(target && target.id==="modal"){return true;}
+  var node=target;
+  while(node && node!==document){
+   if(node.classList && node.classList.contains("modal-close")){
+    var parent=node.parentNode;
+    while(parent && parent!==document){
+     if(parent.id==="modal"){return true;}
+     parent=parent.parentNode;
+    }
+   }
+   node=node.parentNode;
+  }
+  return false;
+ }
+
+ function isApplicationClick(target){
+  var button=findClickableAncestor(target);
+  if(!button || !button.getAttribute){return false;}
+  var raw=button.getAttribute("onclick")||"";
+  return raw.indexOf("openApply(")!==-1 ||
+   button.getAttribute("data-detail-apply")!==null ||
+   button.getAttribute("data-fallback-apply")!==null;
+ }
+
+ function closeDetailWithoutChangingUrl(){
+  var modal=getModal();
+  if(!modal || !modal.classList.contains("open")){return;}
+  var close=modal.querySelector(".modal-close");
+  syncingFromUrl=true;
+  try{
+   if(close){close.click();}
+   else{
+    modal.classList.remove("open");
+    document.body.style.overflow="";
+   }
+  }finally{
+   syncingFromUrl=false;
+  }
+ }
+
+ function openFromLocation(attempt){
+  var id=getUrl().searchParams.get(PARAM);
+
+  if(!id){
+   if(isDetailOpen()){closeDetailWithoutChangingUrl();}
+   return;
+  }
+
+  var button=findMainDetailButton(id);
+  if(!button){
+   if((attempt||0)<maxOpenAttempts){
+    window.setTimeout(function(){openFromLocation((attempt||0)+1);},50);
+   }else{
+    writeTourParam(null,"replace");
+   }
+   return;
+  }
+
+  syncingFromUrl=true;
+  try{
+   button.click();
+  }finally{
+   syncingFromUrl=false;
+  }
+
+  window.setTimeout(function(){
+   if(!isFullDetailOpen()){
+    closeDetailWithoutChangingUrl();
+    writeTourParam(null,"replace");
+   }
+  },0);
+ }
+
+ document.addEventListener("click",function(event){
+  var detailId=readMainDetailId(event.target);
+  if(detailId){
+   if(!syncingFromUrl){
+    window.setTimeout(function(){
+     if(isFullDetailOpen() && getUrl().searchParams.get(PARAM)!==detailId){
+      writeTourParam(detailId,"push");
+     }
+    },0);
+   }
+   return;
+  }
+
+  if(isModalCloseClick(event.target)){
+   if(!syncingFromUrl){
+    window.setTimeout(function(){
+     if(!isDetailOpen()){writeTourParam(null,"replace");}
+    },0);
+   }
+   return;
+  }
+
+  if(isApplicationClick(event.target) && !syncingFromUrl){
+   window.setTimeout(function(){
+    var applyModal=document.getElementById("applyModal");
+    if(applyModal && applyModal.classList.contains("open")){
+     writeTourParam(null,"replace");
+    }
+   },0);
+  }
+ },true);
+
+ window.addEventListener("popstate",function(){openFromLocation(0);});
+
+ if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",function(){openFromLocation(0);},{once:true});
+ }else{
+  openFromLocation(0);
+ }
+})();
+</script>
