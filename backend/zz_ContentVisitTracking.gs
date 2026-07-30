@@ -3,13 +3,10 @@ const CONTENT_VISIT_CONTENT_SOURCE_FALLBACK_ = '28d6d74c-b01d-4a5a-8f32-cbcdb22e
 const CONTENT_VISIT_METRICS_SOURCE_FALLBACK_ = 'ee1f58dd-ae30-4968-a43a-a60344e1ce63';
 const CONTENT_VISIT_TIMEZONE_ = 'Asia/Tokyo';
 
-function doGet(e) {
+function handleContentVisitGet_(e) {
   try {
     const params = e && e.parameter ? e.parameter : {};
-    if (contentVisitText_(params.eventType) === 'content_visit') {
-      return contentVisitJson_(recordContentVisit_(params));
-    }
-    return contentVisitJson_({ ok: true, service: 'SamuRay Tours applications' });
+    return contentVisitJson_(recordContentVisit_(params));
   } catch (err) {
     console.error(err);
     return contentVisitJson_({
