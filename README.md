@@ -102,6 +102,8 @@ Frontend-файл `_includes/v3-10-content-visits.html` отправляет с�
 
 Apps Script-файл `backend/zz_ContentVisitTracking.gs` сохраняет результат в базе Notion `Контент-метрики SamuRay Tours`.
 
+В `Code.gs` существующая функция `doGet` должна быть заменена роутером из файла `backend/Code.doGet.patch.txt`. В проекте Apps Script не должно быть двух функций с именем `doGet`.
+
 Для каждого дня создаётся отдельная строка по публикации и каналу. Например:
 
 `CT-311 - Telegram - 2026-07-30`
