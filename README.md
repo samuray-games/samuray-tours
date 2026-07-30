@@ -119,7 +119,11 @@ Apps Script-файл `backend/zz_ContentVisitTracking.gs` сохраняет р�
 - `Номер публикации`
 - `Ссылка публикации`
 
-Для Telegram-поста добавляется `post`, например `?content=311&channel=telegram&post=135`. `content` остаётся ID карточки Notion, а `post` является номером сообщения Telegram.
+Для Telegram-поста добавляется `post`. Минимальная ссылка для поста №135:
+
+`https://samuray-games.github.io/samuray-tours/?channel=telegram&post=135`
+
+Если публикация также связана с карточкой Notion, добавляется `content`, например `?content=311&channel=telegram&post=135`. `content` остаётся ID карточки Notion, а `post` является номером сообщения Telegram.
 
 Для ссылок из био без `content` и `post` используется дневная строка вида:
 
@@ -137,5 +141,5 @@ Fallback data source ID:
 
 Проверки Apps Script:
 
-- `TEST_CONTENT_VISIT_LOOKUP` - читает сегодняшнюю строку CT-311 без изменения данных
-- `TEST_CONTENT_VISIT_WRITE` - добавляет один тестовый переход CT-311
+- `TEST_CONTENT_VISIT_LOOKUP` - читает сегодняшнюю строку для Telegram-поста №135 без изменения данных
+- `TEST_CONTENT_VISIT_WRITE` - добавляет один тестовый переход для Telegram-поста №135
