@@ -95,3 +95,41 @@ Fallback data source ID:
 
 - `TEST_PARSE_ATTRIBUTION`
 - `TEST_CONTENT_LOOKUP`
+
+## Учёт переходов
+
+Frontend-файл `_includes/v3-10-content-visits.html` отправляет событие `content_visit` при открытии каталога с параметром `content` или `channel`.
+
+Apps Script-файл `backend/zz_ContentVisitTracking.gs` сохраняет результат в базе Notion `Контент-метрики SamuRay Tours`.
+
+Для каждого дня создаётся отдельная строка по публикации и каналу. Например:
+
+`CT-311 - Telegram - 2026-07-30`
+
+Поля метрик:
+
+- `Переходы`
+- `Переходы - компьютер`
+- `Переходы - телефон`
+- `Переходы - планшет`
+- `Последний переход`
+- `Последнее устройство`
+
+Для ссылок из био без `content` используется дневная строка вида:
+
+`BIO - Instagram - 2026-07-30`
+
+IP-адреса и cookies не собираются. Повторная доставка одного и того же `eventId` подавляется через Apps Script Cache.
+
+Дополнительная Script Property необязательна:
+
+- `NOTION_METRICS_DATA_SOURCE_ID`
+
+Fallback data source ID:
+
+`ee1f58dd-ae30-4968-a43a-a60344e1ce63`
+
+Проверки Apps Script:
+
+- `TEST_CONTENT_VISIT_LOOKUP` - читает сегодняшнюю строку CT-311 без изменения данных
+- `TEST_CONTENT_VISIT_WRITE` - добавляет один тестовый переход CT-311
