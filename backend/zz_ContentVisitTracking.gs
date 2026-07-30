@@ -18,7 +18,7 @@ function handleContentVisitGet_(e) {
 
 function TEST_CONTENT_VISIT_LOOKUP() {
   const result = inspectContentVisitMetric_({
-    content: 311,
+    post: 135,
     channel: 'telegram',
   });
   console.log(JSON.stringify(result, null, 2));
@@ -29,10 +29,12 @@ function TEST_CONTENT_VISIT_WRITE() {
   const result = recordContentVisit_({
     eventType: 'content_visit',
     eventId: 'manual-' + Utilities.getUuid(),
-    content: 311,
+    content: '',
     channel: 'telegram',
+    post: 135,
+    publicationUrl: 'https://t.me/samuray_tours/135',
     tour: '',
-    pageUrl: 'https://samuray-games.github.io/samuray-tours/?content=311&channel=telegram',
+    pageUrl: 'https://samuray-games.github.io/samuray-tours/?channel=telegram&post=135',
     referrer: 'Apps Script manual test',
     device: 'desktop',
     platform: 'Google Apps Script',
@@ -58,9 +60,11 @@ function recordContentVisit_(params) {
   const channel = normalizeContentVisitChannel_(params && params.channel);
   const channelLabel = contentVisitChannelLabel_(channel);
   const contentId = contentVisitPositiveInteger_(params && params.content);
+  const postId = contentVisitPositiveInteger_(params && params.post);
+  const publicationUrl = normalizeContentVisitPublicationUrl_(params, channel, postId);
   const device = normalizeContentVisitDevice_(params && params.device);
   const date = Utilities.formatDate(new Date(), CONTENT_VISIT_TIMEZONE_, 'yyyy-MM-dd');
-  const metricTitle = buildContentVisitMetricTitle_(contentId, channelLabel, date);
+  const metricTitle = buildContentVisitMetricTitle_(contentId, postId, channelLabel, date);
   const token = contentVisitScriptProperty_('NOTION_TOKEN');
   const contentSourceId = contentVisitScriptProperty_('NOTION_CONTENT_DATA_SOURCE_ID') || CONTENT_VISIT_CONTENT_SOURCE_FALLBACK_;
   const metricsSourceId = contentVisitScriptProperty_('NOTION_METRICS_DATA_SOURCE_ID') || CONTENT_VISIT_METRICS_SOURCE_FALLBACK_;
@@ -94,6 +98,8 @@ function recordContentVisit_(params) {
         'Последний переход': { date: { start: new Date().toISOString() } },
         'Последнее устройство': contentVisitRichText_(deviceDescription),
       };
+      if (postId) properties['Номер публикации'] = { number: postId };
+      if (publicationUrl) properties['Ссылка публикации'] = { url: publicationUrl };
       properties[deviceProperty] = { number: deviceTotal };
       metricPage = updateContentVisitMetricPage_(token, existing.id, properties);
     } else {
@@ -108,6 +114,8 @@ function recordContentVisit_(params) {
         'Последний переход': { date: { start: new Date().toISOString() } },
         'Последнее устройство': contentVisitRichText_(deviceDescription),
       };
+      if (postId) properties['Номер публикации'] = { number: postId };
+      if (publicationUrl) properties['Ссылка публикации'] = { url: publicationUrl };
       if (contentPage && contentPage.id) {
         properties['Контент'] = { relation: [{ id: contentPage.id }] };
       }
@@ -119,6 +127,8 @@ function recordContentVisit_(params) {
       duplicate: false,
       eventId: eventId,
       contentId: contentId,
+      postId: postId,
+      publicationUrl: publicationUrl || null,
       channel: channel,
       channelLabel: channelLabel,
       device: device,
@@ -140,8 +150,9 @@ function inspectContentVisitMetric_(params) {
   const channel = normalizeContentVisitChannel_(params && params.channel);
   const channelLabel = contentVisitChannelLabel_(channel);
   const contentId = contentVisitPositiveInteger_(params && params.content);
+  const postId = contentVisitPositiveInteger_(params && params.post);
   const date = Utilities.formatDate(new Date(), CONTENT_VISIT_TIMEZONE_, 'yyyy-MM-dd');
-  const metricTitle = buildContentVisitMetricTitle_(contentId, channelLabel, date);
+  const metricTitle = buildContentVisitMetricTitle_(contentId, postId, channelLabel, date);
   const token = contentVisitScriptProperty_('NOTION_TOKEN');
   const metricsSourceId = contentVisitScriptProperty_('NOTION_METRICS_DATA_SOURCE_ID') || CONTENT_VISIT_METRICS_SOURCE_FALLBACK_;
   if (!token) throw new Error('Set NOTION_TOKEN in Script Properties');
@@ -239,9 +250,19 @@ function contentVisitNotionRequest_(token, url, method, payload) {
   return JSON.parse(text || '{}');
 }
 
-function buildContentVisitMetricTitle_(contentId, channelLabel, date) {
-  const subject = contentId ? 'CT-' + contentId : 'BIO';
-  return subject + ' - ' + channelLabel + ' - ' + date;
+function buildContentVisitMetricTitle_(contentId, postId, channelLabel, date) {
+  const subjects = [];
+  if (postId && channelLabel === 'Telegram') subjects.push('TG-' + postId);
+  if (contentId) subjects.push('CT-' + contentId);
+  if (!subjects.length) subjects.push('BIO');
+  return subjects.join(' / ') + ' - ' + channelLabel + ' - ' + date;
+}
+
+function normalizeContentVisitPublicationUrl_(params, channel, postId) {
+  const explicit = contentVisitText_(params && params.publicationUrl);
+  if (/^https?:\/\//i.test(explicit)) return explicit.slice(0, 2000);
+  if (channel === 'telegram' && postId) return 'https://t.me/samuray_tours/' + postId;
+  return '';
 }
 
 function normalizeContentVisitChannel_(value) {

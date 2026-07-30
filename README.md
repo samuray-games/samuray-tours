@@ -98,7 +98,7 @@ Fallback data source ID:
 
 ## Учёт переходов
 
-Frontend-файл `_includes/v3-10-content-visits.html` отправляет событие `content_visit` при открытии каталога с параметром `content` или `channel`.
+Frontend-файл `_includes/v3-10-content-visits.html` отправляет событие `content_visit` при открытии каталога с параметром `content`, `channel` или `post`.
 
 Apps Script-файл `backend/zz_ContentVisitTracking.gs` сохраняет результат в базе Notion `Контент-метрики SamuRay Tours`.
 
@@ -106,7 +106,7 @@ Apps Script-файл `backend/zz_ContentVisitTracking.gs` сохраняет р�
 
 Для каждого дня создаётся отдельная строка по публикации и каналу. Например:
 
-`CT-311 - Telegram - 2026-07-30`
+`TG-135 / CT-311 - Telegram - 2026-07-30`
 
 Поля метрик:
 
@@ -116,8 +116,12 @@ Apps Script-файл `backend/zz_ContentVisitTracking.gs` сохраняет р�
 - `Переходы - планшет`
 - `Последний переход`
 - `Последнее устройство`
+- `Номер публикации`
+- `Ссылка публикации`
 
-Для ссылок из био без `content` используется дневная строка вида:
+Для Telegram-поста добавляется `post`, например `?content=311&channel=telegram&post=135`. `content` остаётся ID карточки Notion, а `post` является номером сообщения Telegram.
+
+Для ссылок из био без `content` и `post` используется дневная строка вида:
 
 `BIO - Instagram - 2026-07-30`
 

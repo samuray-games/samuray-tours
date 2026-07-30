@@ -35,7 +35,9 @@
 
   var rawContent=String(params.get("content")||"").trim();
   var rawChannel=String(params.get("channel")||"").trim();
+  var rawPost=String(params.get("post")||"").trim();
   var validContent=/^\d+$/.test(rawContent) && parseInt(rawContent,10)>0;
+  var validPost=/^\d+$/.test(rawPost) && parseInt(rawPost,10)>0;
   if(!validContent && !rawChannel){return;}
 
   var payload={
@@ -43,6 +45,8 @@
    eventId:makeEventId(),
    content:validContent ? String(parseInt(rawContent,10)) : "",
    channel:normalizeChannel(rawChannel),
+   post:validPost ? String(parseInt(rawPost,10)) : "",
+   publicationUrl:(validPost && normalizeChannel(rawChannel)==="telegram") ? "https://t.me/samuray_tours/"+String(parseInt(rawPost,10)) : "",
    tour:String(params.get("tour")||""),
    pageUrl:location.href,
    referrer:document.referrer||"",
