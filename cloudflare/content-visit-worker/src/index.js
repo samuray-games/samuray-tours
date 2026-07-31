@@ -9,6 +9,8 @@ const ALLOWED_CHANNELS = new Set([
   'direct',
 ]);
 
+const ALLOWED_EVENT_TYPES = new Set(['content_visit', 'catalog_visit']);
+
 const CONTINENT_NAMES_RU = {
   AF: 'Африка',
   AN: 'Антарктида',
@@ -105,10 +107,7 @@ function noContentResponse() {
 
 export default {
   async fetch(request, env) {
-    if (request.method === 'OPTIONS') {
-      return noContentResponse();
-    }
-
+    if (request.method === 'OPTIONS') return noContentResponse();
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return jsonResponse({ ok: false, error: 'Method not allowed' }, 405);
     }
@@ -123,13 +122,13 @@ export default {
       const channel = normalizeChannel(incomingUrl.searchParams.get('channel'));
       const pageUrl = safeHttpUrl(incomingUrl.searchParams.get('pageUrl'));
 
-      if (eventType !== 'content_visit') {
+      if (!ALLOWED_EVENT_TYPES.has(eventType)) {
         return jsonResponse({ ok: false, error: 'Unsupported eventType' }, 400);
       }
       if (!eventId) {
         return jsonResponse({ ok: false, error: 'Missing eventId' }, 400);
       }
-      if (!postId && !contentId) {
+      if (eventType === 'content_visit' && !postId && !contentId) {
         return jsonResponse({ ok: false, error: 'Missing post or content identifier' }, 400);
       }
       if (!ALLOWED_CHANNELS.has(channel)) {
@@ -151,13 +150,11 @@ export default {
 
       const target = new URL(appsScriptUrl);
       incomingUrl.searchParams.forEach((value, key) => {
-        if (key === 'debug') return;
-        if (key.startsWith('geo')) return;
-        if (key === 'sourceUrl') return;
-        if (key === 'cloudflareRayId') return;
+        if (key === 'debug' || key === 'sourceUrl' || key === 'cloudflareRayId' || key.startsWith('geo')) return;
         target.searchParams.set(key, cleanText(value, 2000));
       });
 
+      target.searchParams.set('eventType', eventType);
       target.searchParams.set('channel', channel);
       if (postId) target.searchParams.set('post', postId);
       if (contentId) target.searchParams.set('content', contentId);
@@ -186,8 +183,8 @@ export default {
         method: 'GET',
         redirect: 'follow',
         headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'SamuRay-Tours-Content-Visit-Worker/1.0',
+          Accept: 'application/json',
+          'User-Agent': 'SamuRay-Tours-Content-Visit-Worker/1.1',
         },
       });
 
@@ -211,6 +208,7 @@ export default {
         return jsonResponse({
           ok: true,
           worker: 'samuray-content-visits',
+          eventType,
           geolocationAttached: Boolean(countryCode || cf.city || cf.region),
           countryCode: countryCode || null,
           city: cleanText(cf.city, 300) || null,
