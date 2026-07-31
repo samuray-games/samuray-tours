@@ -100,7 +100,6 @@
 
   function sendVisit(endpoint, query) {
     var requestUrl = endpoint + (endpoint.indexOf('?') === -1 ? '?' : '&') + query.join('&');
-
     try {
       if (typeof window.fetch === 'function') {
         window.fetch(requestUrl, {
@@ -132,17 +131,15 @@
     var postId = positiveInteger(params.get('post'));
     var contentId = positiveInteger(params.get('content'));
     var rawChannel = String(params.get('channel') || '').trim();
-
-    if (!postId && !contentId) return;
     if (!rawChannel) return;
 
     var channel = normalizeChannel(rawChannel);
+    var eventType = postId || contentId ? 'content_visit' : 'catalog_visit';
     var publicationUrl = '';
     if (channel === 'telegram' && postId) {
       publicationUrl = 'https://t.me/samuray_tours/' + postId;
     }
 
-    var endpoint = resolveEndpoint();
     var userAgentDataPlatform = '';
     try {
       userAgentDataPlatform = navigator.userAgentData && navigator.userAgentData.platform
@@ -151,13 +148,19 @@
     } catch (error) {}
 
     var payload = {
-      eventType: 'content_visit',
+      eventType: eventType,
       eventId: makeEventId(),
       post: postId,
       content: contentId,
       channel: channel,
       publicationUrl: publicationUrl,
       tour: String(params.get('tour') || '').trim(),
+      utmSource: String(params.get('utm_source') || '').trim(),
+      utmMedium: String(params.get('utm_medium') || '').trim(),
+      utmCampaign: String(params.get('utm_campaign') || '').trim(),
+      utmContent: String(params.get('utm_content') || '').trim(),
+      utmTerm: String(params.get('utm_term') || '').trim(),
+      fbclid: String(params.get('fbclid') || '').trim(),
       pageUrl: window.location.href,
       catalogUrl: window.location.origin + window.location.pathname,
       referrer: document.referrer || '',
@@ -192,7 +195,7 @@
       query.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
     });
 
-    sendVisit(endpoint, query);
+    sendVisit(resolveEndpoint(), query);
   }
 
   trackVisit();
