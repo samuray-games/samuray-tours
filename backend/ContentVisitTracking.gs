@@ -30,6 +30,7 @@ function TEST_CONTENT_VISIT_WRITE() {
   const result = recordContentVisit_({
     eventType: 'content_visit',
     eventId: 'manual-' + Utilities.getUuid(),
+    testEvent: '1',
     post: 135,
     channel: 'telegram',
     publicationUrl: 'https://t.me/samuray_tours/135',
@@ -64,6 +65,7 @@ function TEST_CONTENT_VISIT_DETAILED_WRITE() {
   const result = recordContentVisit_({
     eventType: 'content_visit',
     eventId: 'manual-detailed-' + Utilities.getUuid(),
+    testEvent: '1',
     content: 311,
     channel: 'telegram',
     tour: '3d',
@@ -101,6 +103,7 @@ function TEST_CONTENT_VISIT_DETAILED_WRITE() {
     geoAsn: 2516,
     geoAsOrganization: 'KDDI CORPORATION',
     geoColo: 'NRT',
+    cloudflareRayId: 'manual-test-NRT',
     sourceUrl: 'https://example.workers.dev/',
   });
   console.log(JSON.stringify(result, null, 2));
@@ -119,6 +122,7 @@ function recordContentVisit_(params) {
   const channelLabel = contentVisitChannelLabel_(channel);
   const postId = contentVisitPositiveInteger_(params && params.post);
   const contentId = contentVisitPositiveInteger_(params && params.content);
+  const testEvent = contentVisitBoolean_(params && params.testEvent);
   const tour = contentVisitText_(params && params.tour).slice(0, 200);
   const pageUrl = contentVisitSafeUrl_(params && params.pageUrl);
   const publicationUrl = normalizeContentVisitPublicationUrl_(params, channel, postId);
@@ -146,68 +150,55 @@ function recordContentVisit_(params) {
       contentPage = findContentVisitContentPage_(token, contentSourceId, contentId);
     }
 
-    const existing = findContentVisitMetricPage_(token, metricsSourceId, metricTitle);
-    const deviceProperty = contentVisitDeviceProperty_(device);
-    const deviceDescription = buildContentVisitDeviceDescription_(params, device);
-    let total = 1;
-    let deviceTotal = 1;
-    let metricPage;
+    let metricPage = null;
+    let total = 0;
+    let deviceTotal = 0;
 
-    if (existing) {
-      total = contentVisitNumber_(existing.properties && existing.properties['Переходы']) + 1;
-      deviceTotal = contentVisitNumber_(existing.properties && existing.properties[deviceProperty]) + 1;
-      const properties = {
-        'Переходы': { number: total },
-        'Последний переход': { date: { start: now } },
-        'Последнее устройство': contentVisitRichText_(deviceDescription),
-      };
-      properties[deviceProperty] = { number: deviceTotal };
-      if (postId) properties['Номер публикации'] = { number: postId };
-      if (publicationUrl) properties['Ссылка публикации'] = { url: publicationUrl };
-      if (tour) properties['Тур'] = contentVisitRichText_(contentVisitTourLabel_(tour));
-      if (pageUrl) properties['Целевая ссылка'] = { url: pageUrl };
-      if (contentPage && contentPage.id) properties['Контент'] = { relation: [{ id: contentPage.id }] };
-      metricPage = updateContentVisitMetricPage_(token, existing.id, properties);
-    } else {
-      const properties = {
-        'Публикация': contentVisitTitle_(metricTitle),
-        'Дата': { date: { start: date } },
-        'Канал': { select: { name: channelLabel } },
-        'Переходы': { number: 1 },
-        'Переходы - компьютер': { number: device === 'desktop' ? 1 : 0 },
-        'Переходы - телефон': { number: device === 'mobile' ? 1 : 0 },
-        'Переходы - планшет': { number: device === 'tablet' ? 1 : 0 },
-        'Последний переход': { date: { start: now } },
-        'Последнее устройство': contentVisitRichText_(deviceDescription),
-      };
-      if (postId) properties['Номер публикации'] = { number: postId };
-      if (publicationUrl) properties['Ссылка публикации'] = { url: publicationUrl };
-      if (tour) properties['Тур'] = contentVisitRichText_(contentVisitTourLabel_(tour));
-      if (pageUrl) properties['Целевая ссылка'] = { url: pageUrl };
-      if (contentPage && contentPage.id) properties['Контент'] = { relation: [{ id: contentPage.id }] };
-      metricPage = createContentVisitMetricPage_(token, metricsSourceId, properties);
+    if (!testEvent) {
+      const aggregateResult = upsertContentVisitMetric_({
+        token: token,
+        metricsSourceId: metricsSourceId,
+        metricTitle: metricTitle,
+        channelLabel: channelLabel,
+        postId: postId,
+        tour: tour,
+        pageUrl: pageUrl,
+        publicationUrl: publicationUrl,
+        device: device,
+        deviceDescription: buildContentVisitDeviceDescription_(params, device),
+        date: date,
+        now: now,
+        contentPage: contentPage,
+      });
+      metricPage = aggregateResult.metricPage;
+      total = aggregateResult.total;
+      deviceTotal = aggregateResult.deviceTotal;
     }
 
     let eventPage = null;
     let eventError = null;
     try {
-      const eventProperties = buildContentVisitEventProperties_({
-        params: params || {},
-        eventId: eventId,
-        postId: postId,
-        contentId: contentId,
-        channelLabel: channelLabel,
-        device: device,
-        tour: tour,
-        pageUrl: pageUrl,
-        publicationUrl: publicationUrl,
-        date: date,
-        now: now,
-        nowDate: nowDate,
-        contentPage: contentPage,
-        metricPage: metricPage,
-      });
-      eventPage = createContentVisitEventPage_(token, eventsSourceId, eventProperties);
+      eventPage = createContentVisitEventPage_(
+        token,
+        eventsSourceId,
+        buildContentVisitEventProperties_({
+          params: params || {},
+          eventId: eventId,
+          postId: postId,
+          contentId: contentId,
+          channelLabel: channelLabel,
+          device: device,
+          tour: tour,
+          pageUrl: pageUrl,
+          publicationUrl: publicationUrl,
+          date: date,
+          now: now,
+          nowDate: nowDate,
+          testEvent: testEvent,
+          contentPage: contentPage,
+          metricPage: metricPage,
+        })
+      );
     } catch (eventErr) {
       eventError = String(eventErr && eventErr.message ? eventErr.message : eventErr);
       console.error('Detailed content visit event failed: ' + eventError);
@@ -217,14 +208,16 @@ function recordContentVisit_(params) {
     return {
       ok: true,
       duplicate: false,
+      testEvent: testEvent,
+      aggregateSkipped: testEvent,
       eventId: eventId,
       postId: postId,
       contentId: contentId,
       channel: channel,
       device: device,
       tour: tour || null,
-      total: total,
-      deviceTotal: deviceTotal,
+      total: testEvent ? null : total,
+      deviceTotal: testEvent ? null : deviceTotal,
       metricTitle: metricTitle,
       metricPageId: metricPage && metricPage.id ? metricPage.id : null,
       metricUrl: metricPage && metricPage.url ? metricPage.url : null,
@@ -239,8 +232,64 @@ function recordContentVisit_(params) {
   }
 }
 
+function upsertContentVisitMetric_(context) {
+  const existing = findContentVisitMetricPage_(context.token, context.metricsSourceId, context.metricTitle);
+  const deviceProperty = contentVisitDeviceProperty_(context.device);
+  let total = 1;
+  let deviceTotal = 1;
+  let metricPage;
+
+  if (existing) {
+    total = contentVisitNumber_(existing.properties && existing.properties['Переходы']) + 1;
+    deviceTotal = contentVisitNumber_(existing.properties && existing.properties[deviceProperty]) + 1;
+    const properties = {
+      'Переходы': { number: total },
+      'Последний переход': { date: { start: context.now } },
+      'Последнее устройство': contentVisitRichText_(context.deviceDescription),
+    };
+    properties[deviceProperty] = { number: deviceTotal };
+    if (context.postId) properties['Номер публикации'] = { number: context.postId };
+    if (context.publicationUrl) properties['Ссылка публикации'] = { url: context.publicationUrl };
+    if (context.tour) properties['Тур'] = contentVisitRichText_(contentVisitTourLabel_(context.tour));
+    if (context.pageUrl) properties['Целевая ссылка'] = { url: context.pageUrl };
+    if (context.contentPage && context.contentPage.id) properties['Контент'] = { relation: [{ id: context.contentPage.id }] };
+    metricPage = updateContentVisitMetricPage_(context.token, existing.id, properties);
+  } else {
+    const properties = {
+      'Публикация': contentVisitTitle_(context.metricTitle),
+      'Дата': { date: { start: context.date } },
+      'Канал': { select: { name: context.channelLabel } },
+      'Переходы': { number: 1 },
+      'Переходы - компьютер': { number: context.device === 'desktop' ? 1 : 0 },
+      'Переходы - телефон': { number: context.device === 'mobile' ? 1 : 0 },
+      'Переходы - планшет': { number: context.device === 'tablet' ? 1 : 0 },
+      'Последний переход': { date: { start: context.now } },
+      'Последнее устройство': contentVisitRichText_(context.deviceDescription),
+    };
+    if (context.postId) properties['Номер публикации'] = { number: context.postId };
+    if (context.publicationUrl) properties['Ссылка публикации'] = { url: context.publicationUrl };
+    if (context.tour) properties['Тур'] = contentVisitRichText_(contentVisitTourLabel_(context.tour));
+    if (context.pageUrl) properties['Целевая ссылка'] = { url: context.pageUrl };
+    if (context.contentPage && context.contentPage.id) properties['Контент'] = { relation: [{ id: context.contentPage.id }] };
+    metricPage = createContentVisitMetricPage_(context.token, context.metricsSourceId, properties);
+  }
+
+  return {
+    metricPage: metricPage,
+    total: total,
+    deviceTotal: deviceTotal,
+  };
+}
+
 function buildContentVisitEventProperties_(context) {
   const params = context.params || {};
+  const geographyReceived = Boolean(
+    contentVisitText_(params.geoCountryCode) ||
+    contentVisitText_(params.geoCountry) ||
+    contentVisitText_(params.geoRegion) ||
+    contentVisitText_(params.geoCity) ||
+    contentVisitText_(params.geoAsn)
+  );
   const properties = {
     'Переход': contentVisitTitle_(buildContentVisitEventTitle_(context)),
     'Event ID': contentVisitRichText_(context.eventId),
@@ -249,14 +298,14 @@ function buildContentVisitEventProperties_(context) {
     'День JST': { date: { start: context.date } },
     'Устройство': { select: { name: contentVisitDeviceLabel_(context.device) } },
     'Дубликат': { checkbox: false },
+    'Тест': { checkbox: Boolean(context.testEvent) },
+    'География получена': { checkbox: geographyReceived },
   };
 
-  if (context.contentPage && context.contentPage.id) {
-    properties['Контент'] = { relation: [{ id: context.contentPage.id }] };
-  }
-  if (context.metricPage && context.metricPage.id) {
-    properties['Сводная метрика'] = { relation: [{ id: context.metricPage.id }] };
-  }
+  const clientTimestamp = contentVisitIsoDate_(params.clientTimestamp);
+  if (clientTimestamp) properties['Время клиента'] = { date: { start: clientTimestamp } };
+  if (context.contentPage && context.contentPage.id) properties['Контент'] = { relation: [{ id: context.contentPage.id }] };
+  if (context.metricPage && context.metricPage.id) properties['Сводная метрика'] = { relation: [{ id: context.metricPage.id }] };
   if (context.contentId) properties['CT номер'] = { number: context.contentId };
   if (context.postId) properties['Номер публикации'] = { number: context.postId };
   if (context.tour) properties['Тур'] = contentVisitRichText_(contentVisitTourLabel_(context.tour));
@@ -291,6 +340,7 @@ function buildContentVisitEventProperties_(context) {
   contentVisitSetNumber_(properties, 'ASN', params.geoAsn, 0, 4294967295);
   contentVisitSetRichText_(properties, 'Провайдер', params.geoAsOrganization);
   contentVisitSetRichText_(properties, 'Cloudflare POP', params.geoColo);
+  contentVisitSetRichText_(properties, 'Cloudflare Ray ID', params.cloudflareRayId);
 
   contentVisitSetUrl_(properties, 'Источник', params.sourceUrl);
   contentVisitSetUrl_(properties, 'Страница каталога', params.catalogUrl);
@@ -558,6 +608,19 @@ function contentVisitFiniteNumber_(value, min, max) {
   if (typeof min === 'number' && number < min) return null;
   if (typeof max === 'number' && number > max) return null;
   return number;
+}
+
+function contentVisitBoolean_(value) {
+  if (value === true || value === 1) return true;
+  const text = contentVisitText_(value).toLowerCase();
+  return text === '1' || text === 'true' || text === 'yes' || text === 'on';
+}
+
+function contentVisitIsoDate_(value) {
+  const text = contentVisitText_(value);
+  if (!text) return '';
+  const date = new Date(text);
+  return isNaN(date.getTime()) ? '' : date.toISOString();
 }
 
 function contentVisitText_(value) {
