@@ -98,6 +98,29 @@
     return 'visit-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
   }
 
+  function sendVisit(endpoint, query) {
+    var requestUrl = endpoint + (endpoint.indexOf('?') === -1 ? '?' : '&') + query.join('&');
+
+    try {
+      if (typeof window.fetch === 'function') {
+        window.fetch(requestUrl, {
+          method: 'GET',
+          mode: 'no-cors',
+          cache: 'no-store',
+          credentials: 'omit',
+          keepalive: true,
+          referrerPolicy: 'no-referrer'
+        }).catch(function () {});
+        return;
+      }
+    } catch (error) {}
+
+    var beacon = new Image(1, 1);
+    beacon.referrerPolicy = 'no-referrer';
+    beacon.src = requestUrl;
+    window.__samurayContentVisitBeacon = beacon;
+  }
+
   function trackVisit() {
     var params;
     try {
@@ -169,10 +192,7 @@
       query.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
     });
 
-    var beacon = new Image(1, 1);
-    beacon.referrerPolicy = 'no-referrer';
-    beacon.src = endpoint + (endpoint.indexOf('?') === -1 ? '?' : '&') + query.join('&');
-    window.__samurayContentVisitBeacon = beacon;
+    sendVisit(endpoint, query);
   }
 
   trackVisit();
