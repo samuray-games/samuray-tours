@@ -102,6 +102,35 @@
     });
   }
 
+  var originalSetFilter = typeof window.setFilter === "function" ? window.setFilter : null;
+
+  function runFallbackFilter(key){
+    var buttons = document.querySelectorAll("#filters [data-fallback-filter]");
+    for(var i = 0; i < buttons.length; i++){
+      if(buttons[i].getAttribute("data-fallback-filter") === key){
+        buttons[i].click();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  window.setFilter = function(key){
+    if(runFallbackFilter(key)){
+      var section = document.getElementById("catalog");
+      if(section){
+        setTimeout(function(){
+          section.scrollIntoView({behavior:"smooth", block:"start"});
+        }, 0);
+      }
+      schedule();
+      return;
+    }
+    if(originalSetFilter){
+      return originalSetFilter(key);
+    }
+  };
+
   addEventListener("click", schedule, true);
   addEventListener("popstate", schedule);
   addEventListener("pageshow", schedule);
@@ -116,5 +145,16 @@
       if(!data[id] || data[id].duration !== rounded[id] || publicLabel(id).indexOf(" • ") === -1) issues.push(id);
     });
     return {ok: issues.length === 0, count: Object.keys(rounded).length, issues: issues};
+  };
+
+  window.SAMURAY_FILTER_BRIDGE_AUDIT = function(){
+    var buttons = document.querySelectorAll("#filters [data-fallback-filter]");
+    return {
+      fallback: buttons.length > 0,
+      firstButton: Array.prototype.some.call(buttons, function(button){
+        return button.getAttribute("data-fallback-filter") === "first";
+      }),
+      setFilter: typeof window.setFilter === "function"
+    };
   };
 })();
