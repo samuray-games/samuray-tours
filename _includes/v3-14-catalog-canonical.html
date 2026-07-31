@@ -1,0 +1,244 @@
+<style>
+.card .tour-intro{
+ display:grid;
+ grid-template-columns:minmax(112px,34%) minmax(0,1fr);
+ gap:18px;
+ align-items:stretch;
+ margin:18px 0 16px;
+}
+.card .tour-cover{
+ display:block;
+ width:100%;
+ height:100%;
+ min-height:0;
+ aspect-ratio:3/4;
+ border-radius:20px;
+ overflow:hidden;
+ box-shadow:0 14px 30px rgba(21,20,18,.18);
+}
+.card .tour-intro .desc{
+ margin:0;
+ min-width:0;
+ min-height:100%;
+ display:flex;
+ align-items:center;
+ font-size:clamp(15px,1.35vw,19px);
+ line-height:1.45;
+}
+@media(max-width:700px){
+ .card .tour-intro{
+  grid-template-columns:minmax(104px,38%) minmax(0,1fr);
+  gap:12px;
+  margin:14px 0;
+ }
+ .card .tour-cover{border-radius:16px;}
+ .card .tour-intro .desc{
+  font-size:clamp(13px,3.5vw,17px);
+  line-height:1.38;
+ }
+}
+</style>
+<script>
+(function(){
+ "use strict";
+ var DATA={"3d":{"title":"3D Токио - Мэйдзи Дзингу, Харадзюку, Сибуя","cardPrice":"15 900 ₽","fullPrice":"15 900 ₽ за группу до 4 человек (+2 000 ₽ за каждого следующего гостя)","duration":"3 часа 10 минут","badge":"Экспресс","mark":"参","colors":["#14213d","#b3202a"],"coverLines":["3D Токио","Мэйдзи • Харадзюку","Сибуя"]},"asakusa":{"title":"Асакуса: Путешествие из Эдо в Токио","cardPrice":"14 900 ₽","fullPrice":"14 900 ₽ за группу до 4 человек (+2 000 ₽ за каждого следующего гостя)","duration":"3 часа","badge":"Экспресс","mark":"雷","colors":["#8b1e2d","#d46a2f"],"coverLines":["Асакуса","из Эдо","в Токио"]},"tsukiji":{"title":"Утренний Цукидзи Food Sprint + Гиндза-глам","cardPrice":"16 900 ₽","fullPrice":"16 900 ₽ за группу до 4 человек (+2 000 ₽ за каждого следующего гостя)","duration":"3 часа","badge":"Экспресс","mark":"鮨","colors":["#0e6251","#d4a017"],"coverLines":["Цукидзи","Food Sprint","+ Гиндза-глам"]},"akiba":{"title":"Акихабара Geek Lite + Амэёко Маркет","cardPrice":"14 900 ₽","fullPrice":"14 900 ₽ за группу до 4 человек (+2 000 ₽ за каждого следующего гостя)","duration":"165-175 минут","badge":"Экспресс","mark":"電","colors":["#302b63","#ff2d95"],"coverLines":["Акихабара","Geek Lite","+ Амэёко"]},"yanaka":{"title":"Янака Ретро Эдо + Храм Нэзу Ториевый тоннель","cardPrice":"14 900 ₽","fullPrice":"14 900 ₽ за группу до 4 человек (+2 000 ₽ за каждого следующего гостя)","duration":"3 часа","badge":"Экспресс","mark":"猫","colors":["#5d4037","#c98b5f"],"coverLines":["Янака Ретро Эдо","+ Храм Нэзу","Ториевый тоннель"]},"architecture":{"title":"Архитектурный Центр: Гиндза → Маруноути → Токио стейшн","cardPrice":"15 900 ₽","fullPrice":"15 900 ₽ за группу до 4 человек (+2 000 ₽ за каждого следующего гостя)","duration":"3 часа","badge":"Экспресс","mark":"建","colors":["#263238","#6f8fa6"],"coverLines":["Архитектурный","Центр","Токио"]},"gardens":{"title":"Карманные Сады Большого Города","cardPrice":"15 900 ₽","fullPrice":"15 900 ₽ за группу до 4 человек (+2 000 ₽ за каждого следующего гостя)","duration":"3 часа","badge":"Экспресс","mark":"庭","colors":["#1b5e20","#7cb342"],"coverLines":["Карманные сады","Большого","Города"]},"depachika":{"title":"Дешёвый & Весёлый Фуд-крол по Депачика","cardPrice":"14 900 ₽","fullPrice":"14 900 ₽ за группу до 4 человек (+2 000 ₽ за каждого следующего гостя)","duration":"3 часа","badge":"Экспресс","mark":"食","colors":["#7b1f3a","#f2a65a"],"coverLines":["Дешёвый & Весёлый","Фуд-крол","по Депачика"]},"hanami":{"title":"Ханами Экспресс","cardPrice":"5 900 ₽ с человека / 23 900 ₽ приватно","fullPrice":"5 900 ₽ за человека, приватный формат 23 900 ₽","duration":"3 часа","badge":"Сезонный","mark":"桜","colors":["#a83279","#f7b7d2"],"coverLines":["Ханами","Экспресс"]},"momiji":{"title":"Момидзи Экспресс","cardPrice":"5 900 ₽ с человека / 23 900 ₽ приватно","fullPrice":"5 900 ₽ за человека, приватный формат 23 900 ₽","duration":"3 часа","badge":"Сезонный","mark":"楓","colors":["#8f2d1f","#e67e22"],"coverLines":["Момидзи","Экспресс"]},"season-express":{"title":"Сезонный Tokyo Express","cardPrice":"17 900 ₽","fullPrice":"17 900 ₽ за приватную группу до 4 человек (+2 000 ₽ за каждого следующего гостя)","duration":"3 часа","badge":"Сезонный","mark":"旬","colors":["#00695c","#4db6ac"],"coverLines":["Сезонный","Tokyo Express"]},"season-special":{"title":"Сезонный Tokyo Special","cardPrice":"29 900 ₽","fullPrice":"29 900 ₽ за приватную группу до 4 человек (+3 000 ₽ за каждого следующего гостя)","duration":"Ориентировочно 8 часов","badge":"Сезонный","mark":"季","colors":["#4a148c","#ab47bc"],"coverLines":["Сезонный","Tokyo Special"]},"shinjuku":{"title":"Синдзюку Неон & Голден Гай","cardPrice":"3 900 ₽ с человека / 15 900 ₽ приватно","fullPrice":"3 900 ₽ за человека, приватный формат 15 900 ₽","duration":"3 часа","badge":"Вечер","mark":"夜","colors":["#111827","#d81b60"],"coverLines":["Синдзюку","Неон &","Голден Гай"]},"classic":{"title":"Классический - Изюминки Токио","cardPrice":"24 900 ₽","fullPrice":"24 900 ₽ за группу до 4 человек (+3 000 ₽ за каждого следующего гостя)","duration":"8 часов","badge":"Полный день","mark":"東","colors":["#8e1b1b","#d4af37"],"coverLines":["Классический","Изюминки","Токио"]},"contrast":{"title":"Современность & Традиционность","cardPrice":"25 900 ₽","fullPrice":"25 900 ₽ за группу до 4 человек (+3 000 ₽ за каждого следующего гостя)","duration":"8 часов","badge":"Полный день","mark":"今","colors":["#0d47a1","#c62828"],"coverLines":["Современность","&","Традиционность"]},"temples":{"title":"Сады и храмы большого города","cardPrice":"24 900 ₽","fullPrice":"24 900 ₽ за группу до 4 человек (+3 000 ₽ за каждого следующего гостя)","duration":"8 часов","badge":"Полный день","mark":"寺","colors":["#3e2723","#8d6e63"],"coverLines":["Сады и храмы","Большого","Города"]},"culinary":{"title":"Кулинарный день","cardPrice":"27 900 ₽","fullPrice":"27 900 ₽ за группу до 4 человек (+3 000 ₽ за каждого следующего гостя)","duration":"8 часов","badge":"Полный день","mark":"味","colors":["#b71c1c","#ff8f00"],"coverLines":["Кулинарный","день"]},"nightfull":{"title":"Ночной Токио - комбо день","cardPrice":"29 900 ₽","fullPrice":"29 900 ₽ за группу до 4 человек (+3 000 ₽ за каждого следующего гостя)","duration":"10 часов","badge":"Полный день","mark":"月","colors":["#050816","#4527a0"],"coverLines":["Ночной Токио","комбо день"]},"express":{"title":"Всё за день!","cardPrice":"29 900 ₽","fullPrice":"29 900 ₽ за группу до 4 человек (+3 000 ₽ за каждого следующего гостя)","duration":"9 часов","badge":"Полный день","mark":"速","colors":["#b71c1c","#263238"],"coverLines":["Всё","за день!"]},"family":{"title":"Токио для семей с детьми","cardPrice":"26 900 ₽","fullPrice":"26 900 ₽ за группу до 4 человек (+3 000 ₽ за каждого следующего гостя)","duration":"7 часов 30 минут","badge":"Полный день","mark":"家","colors":["#00695c","#ffb74d"],"coverLines":["Токио","для семей","с детьми"]},"imperial":{"title":"Классика + Императорские сады","cardPrice":"26 900 ₽","fullPrice":"26 900 ₽ за группу до 4 человек (+3 000 ₽ за каждого следующего гостя)","duration":"8 часов","badge":"Полный день","mark":"皇","colors":["#1a237e","#b38b2d"],"coverLines":["Классика +","Императорские","сады"]},"odaiba":{"title":"Одайба и бухта Токио","cardPrice":"25 900 ₽","fullPrice":"25 900 ₽ за группу до 4 человек (+3 000 ₽ за каждого следующего гостя)","duration":"8 часов","badge":"Полный день","mark":"湾","colors":["#006064","#29b6f6"],"coverLines":["Одайба","и бухта","Токио"]},"karaoke":{"title":"Караоке-вечер в Токио","cardPrice":"3 900 ₽ с человека / от 12 900 ₽ приватно","fullPrice":"3 900 ₽ за человека, приватный формат от 12 900 ₽","duration":"3 часа","badge":"Вечер","mark":"歌","colors":["#4a148c","#ff4081"],"coverLines":["Караоке-вечер","в Токио"]},"kawaguchiko":{"title":"Кавагучико - тихая Япония у Фудзи","cardPrice":"34 900 ₽","fullPrice":"34 900 ₽ за группу до 4 человек (+3 000 ₽ за каждого следующего гостя); транспорт, входы и питание оплачиваются отдельно","duration":"10-12 часов с дорогой","badge":"Выездной","mark":"富士","colors":["#1565c0","#90caf9"],"coverLines":["Кавагучико","тихая Япония","у Фудзи"]},"kamakura":{"title":"Камакура","cardPrice":"29 900 ₽","fullPrice":"29 900 ₽ за группу до 4 человек (+3 000 ₽ за каждого следующего гостя); транспорт, входы и питание оплачиваются отдельно","duration":"8 часов","badge":"Выездной","mark":"鎌","colors":["#37474f","#4db6ac"],"coverLines":["Камакура"]}};
+ var grid=document.getElementById("grid");
+ var modal=document.getElementById("modal");
+ var modalContent=document.getElementById("modalContent");
+ var currentId=new URL(window.location.href).searchParams.get("tour")||null;
+ var patching=false;
+ var gridObserver=null;
+ var modalObserver=null;
+
+ function esc(v){
+  return String(v==null?"":v).replace(/[&<>"']/g,function(c){
+   return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c];
+  });
+ }
+ function idFromCard(card){
+  if(!card){return null;}
+  var direct=card.getAttribute("data-catalog25-card")||card.getAttribute("data-tour-id");
+  if(direct){return direct;}
+  var button=card.querySelector("[data-fallback-detail],[data-catalog25-detail],[onclick*='openTour'],[onclick*=\"openTour\"]");
+  if(!button){return null;}
+  var id=button.getAttribute("data-fallback-detail")||button.getAttribute("data-catalog25-detail");
+  if(id){return id;}
+  var onclick=button.getAttribute("onclick")||"";
+  var match=onclick.match(/openTour\(\s*['\"]([^'\"]+)['\"]\s*\)/);
+  return match?match[1]:null;
+ }
+ function findAttrTarget(node,names){
+  while(node && node!==document){
+   if(node.getAttribute){
+    for(var i=0;i<names.length;i++){
+     var value=node.getAttribute(names[i]);
+     if(value){return {node:node,id:value};}
+    }
+   }
+   node=node.parentNode;
+  }
+  return null;
+ }
+ function titleTspans(t){
+  var lines=t.coverLines||[t.title];
+  var start=710-(lines.length-1)*62;
+  var html="";
+  for(var i=0;i<lines.length;i++){
+   html+='<tspan x="58" y="'+(start+i*68)+'">'+esc(lines[i])+'</tspan>';
+  }
+  return html;
+ }
+ function coverSvg(id,t){
+  var gid="tour-gradient-"+id;
+  return '<svg class="tour-cover" viewBox="0 0 750 1000" role="img" aria-label="'+esc(t.title)+'">'+
+   '<defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="1" y2="1">'+
+   '<stop offset="0" stop-color="'+esc(t.colors[0])+'"/><stop offset="1" stop-color="'+esc(t.colors[1])+'"/></linearGradient></defs>'+
+   '<rect width="750" height="1000" rx="34" fill="url(#'+gid+')"/>'+
+   '<circle cx="600" cy="180" r="210" fill="#fff" opacity=".10"/>'+
+   '<circle cx="598" cy="180" r="152" fill="none" stroke="#fff" stroke-width="2" opacity=".20"/>'+
+   '<path d="M-40 410 L790 110 M-20 520 L790 220" fill="none" stroke="#fff" stroke-width="3" opacity=".10"/>'+
+   '<text x="56" y="78" fill="#fff" opacity=".78" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="24" font-weight="700" letter-spacing="5">SAMURAY TOURS</text>'+
+   '<text x="72" y="430" fill="#fff" opacity=".16" font-family="Hiragino Sans,Yu Gothic,system-ui,sans-serif" font-size="255" font-weight="800">'+esc(t.mark)+'</text>'+
+   '<rect x="56" y="614" width="112" height="6" rx="3" fill="#fff" opacity=".82"/>'+
+   '<text fill="#fff" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="54" font-weight="850" letter-spacing="-1">'+titleTspans(t)+'</text>'+
+   '<text x="58" y="930" fill="#fff" opacity=".72" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="22" font-weight="650" letter-spacing="3">PRIVATE WALK • TOKYO</text>'+
+  '</svg>';
+ }
+ function patchCard(card){
+  var id=idFromCard(card);
+  var t=DATA[id];
+  if(!id || !t){return;}
+  card.setAttribute("data-tour-id",id);
+  var title=card.querySelector("h3");
+  if(title){title.textContent=t.title;}
+  var desc=card.querySelector(".desc");
+  if(desc){
+   var intro=card.querySelector(".tour-intro");
+   if(!intro){
+    intro=document.createElement("div");
+    intro.className="tour-intro";
+    desc.parentNode.insertBefore(intro,desc);
+    intro.appendChild(desc);
+   }
+   var old=intro.querySelector(".tour-cover");
+   if(!old){
+    intro.insertAdjacentHTML("afterbegin",coverSvg(id,t));
+   }
+  }
+  var meta=card.querySelectorAll(".meta span");
+  if(meta[0]){meta[0].textContent=t.duration;}
+  if(meta[1]){meta[1].textContent=t.badge;}
+  var price=card.querySelector(".price");
+  if(price){price.textContent=t.cardPrice;}
+ }
+ function patchCards(){
+  if(!grid || patching){return;}
+  patching=true;
+  if(gridObserver){gridObserver.disconnect();}
+  try{
+   var cards=grid.querySelectorAll(".card");
+   for(var i=0;i<cards.length;i++){patchCard(cards[i]);}
+  }finally{
+   if(gridObserver){gridObserver.observe(grid,{childList:true});}
+   patching=false;
+  }
+ }
+ function replaceExpressNames(root){
+  if(!root){return;}
+  var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  var node;
+  while((node=walker.nextNode())){
+   if(node.nodeValue.indexOf("Токио Экспресс")!==-1 || node.nodeValue.indexOf('Экспресс "Всё за день"')!==-1){
+    node.nodeValue=node.nodeValue
+     .replace(/Токио Экспресс/g,"Всё за день!")
+     .replace(/Экспресс "Всё за день"/g,"Всё за день!");
+   }
+  }
+ }
+ function patchModal(id){
+  var t=DATA[id];
+  if(!t || !modalContent){return;}
+  var h2=modalContent.querySelector("h2");
+  if(h2){h2.textContent=t.title;}
+  var infos=modalContent.querySelectorAll(".info");
+  for(var i=0;i<infos.length;i++){
+   var small=infos[i].querySelector("small");
+   var bold=infos[i].querySelector("b");
+   if(!small||!bold){continue;}
+   if(small.textContent.trim()==="Длительность"){bold.textContent=t.duration;}
+   if(small.textContent.trim()==="Стоимость"){bold.textContent=t.fullPrice;}
+  }
+  if(id==="express"){replaceExpressNames(modalContent);}
+ }
+ function patchApply(id){
+  var t=DATA[id];
+  if(!t){return;}
+  var values={
+   tourId:id,
+   tourTitle:t.title,
+   tourPrice:t.fullPrice,
+   selectedTourBadge:t.title,
+   summaryTour:t.title,
+   summaryPrice:t.fullPrice
+  };
+  Object.keys(values).forEach(function(key){
+   var el=document.getElementById(key);
+   if(!el){return;}
+   if("value" in el && (key==="tourId"||key==="tourTitle"||key==="tourPrice")){el.value=values[key];}
+   else{el.textContent=values[key];}
+  });
+ }
+ function scheduleDetail(id){
+  if(id){currentId=id;}
+  [0,40,120,280].forEach(function(delay){
+   setTimeout(function(){
+    patchModal(currentId);
+    patchApply(currentId);
+   },delay);
+  });
+ }
+
+ window.addEventListener("click",function(event){
+  var detail=findAttrTarget(event.target,["data-fallback-detail","data-catalog25-detail"]);
+  if(detail){currentId=detail.id;scheduleDetail(detail.id);return;}
+  var apply=findAttrTarget(event.target,["data-fallback-apply","data-catalog25-apply","data-detail-apply"]);
+  if(apply){
+   var id=apply.id||currentId;
+   if(id){currentId=id;scheduleDetail(id);}
+   return;
+  }
+  var node=event.target;
+  while(node && node!==document){
+   if(node.getAttribute){
+    var onclick=node.getAttribute("onclick")||"";
+    var detailMatch=onclick.match(/openTour\(\s*['\"]([^'\"]+)['\"]\s*\)/);
+    var applyMatch=onclick.match(/openApply\(\s*['\"]([^'\"]+)['\"]\s*\)/);
+    if(detailMatch){currentId=detailMatch[1];scheduleDetail(currentId);return;}
+    if(applyMatch){currentId=applyMatch[1];scheduleDetail(currentId);return;}
+   }
+   node=node.parentNode;
+  }
+ },true);
+
+ if(grid){
+  gridObserver=new MutationObserver(function(){setTimeout(patchCards,0);});
+  gridObserver.observe(grid,{childList:true});
+ }
+ if(modalContent){
+  modalObserver=new MutationObserver(function(){scheduleDetail(currentId||new URL(window.location.href).searchParams.get("tour"));});
+  modalObserver.observe(modalContent,{childList:true,subtree:true});
+ }
+ window.addEventListener("popstate",function(){
+  currentId=new URL(window.location.href).searchParams.get("tour")||null;
+  scheduleDetail(currentId);
+ });
+ patchCards();
+ setTimeout(patchCards,120);
+ setTimeout(patchCards,500);
+ setTimeout(function(){
+  currentId=currentId||new URL(window.location.href).searchParams.get("tour");
+  scheduleDetail(currentId);
+ },650);
+ window.SAMURAY_TOUR_CATALOG=DATA;
+})();
+</script>
