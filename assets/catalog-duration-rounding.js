@@ -11,6 +11,12 @@
     return window.SAMURAY_TOUR_CATALOG || {};
   }
 
+  function publicLabel(id){
+    var data = catalog();
+    var badge = data[id] && data[id].badge;
+    return rounded[id] + (badge ? " • " + badge : "");
+  }
+
   function applyData(){
     var data = catalog();
     Object.keys(rounded).forEach(function(id){
@@ -35,8 +41,19 @@
     grid.querySelectorAll(".card").forEach(function(card){
       var id = cardId(card);
       if(!rounded[id]) return;
-      var duration = card.querySelector(".meta span");
-      if(duration && duration.textContent !== rounded[id]) duration.textContent = rounded[id];
+
+      var meta = card.querySelector(".meta");
+      if(!meta) return;
+
+      var expected = publicLabel(id);
+      var spans = meta.querySelectorAll("span");
+      if(spans.length){
+        if(spans[0].textContent !== expected) spans[0].textContent = expected;
+        spans[0].style.display = "";
+        for(var i = 1; i < spans.length; i++) spans[i].style.display = "none";
+      }else if(meta.textContent.trim() !== expected){
+        meta.textContent = expected;
+      }
     });
   }
 
@@ -52,11 +69,12 @@
     if(!rounded[id]) return;
     var modal = document.getElementById("modalContent");
     if(!modal) return;
+    var expected = publicLabel(id);
     modal.querySelectorAll(".info").forEach(function(info){
       var label = info.querySelector("small");
       var value = info.querySelector("b");
-      if(label && value && label.textContent.trim() === "Длительность" && value.textContent !== rounded[id]){
-        value.textContent = rounded[id];
+      if(label && value && label.textContent.trim() === "Длительность" && value.textContent !== expected){
+        value.textContent = expected;
       }
     });
   }
@@ -88,7 +106,7 @@
     var data = catalog();
     var issues = [];
     Object.keys(rounded).forEach(function(id){
-      if(!data[id] || data[id].duration !== rounded[id]) issues.push(id);
+      if(!data[id] || data[id].duration !== rounded[id] || !data[id].badge) issues.push(id);
     });
     return {ok: issues.length === 0, count: Object.keys(rounded).length, issues: issues};
   };
