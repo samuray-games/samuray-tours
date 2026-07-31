@@ -7,20 +7,28 @@
     "family": "8 часов"
   };
 
+  var fallbackBadges = {
+    "3d": "Экспресс",
+    "akiba": "Экспресс",
+    "family": "Полный день"
+  };
+
   function catalog(){
     return window.SAMURAY_TOUR_CATALOG || {};
   }
 
   function publicLabel(id){
     var data = catalog();
-    var badge = data[id] && data[id].badge;
+    var badge = data[id] && data[id].badge ? data[id].badge : fallbackBadges[id];
     return rounded[id] + (badge ? " • " + badge : "");
   }
 
   function applyData(){
     var data = catalog();
     Object.keys(rounded).forEach(function(id){
-      if(data[id]) data[id].duration = rounded[id];
+      if(!data[id]) return;
+      data[id].duration = rounded[id];
+      if(!data[id].badge && fallbackBadges[id]) data[id].badge = fallbackBadges[id];
     });
   }
 
@@ -106,7 +114,7 @@
     var data = catalog();
     var issues = [];
     Object.keys(rounded).forEach(function(id){
-      if(!data[id] || data[id].duration !== rounded[id] || !data[id].badge) issues.push(id);
+      if(!data[id] || data[id].duration !== rounded[id] || publicLabel(id).indexOf(" • ") === -1) issues.push(id);
     });
     return {ok: issues.length === 0, count: Object.keys(rounded).length, issues: issues};
   };
