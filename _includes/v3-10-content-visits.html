@@ -1,0 +1,95 @@
+<script>
+(function () {
+  if (window.__samurayContentVisitTracked) return;
+  window.__samurayContentVisitTracked = true;
+
+  var endpoint = 'https://script.google.com/macros/s/AKfycbztCYRPUfjdHesTP0hDl9WEwP_Uapj31sLkYH8mO89qvREswQ_5n5Ccv8rP2he66bPiHA/exec';
+
+  function positiveInteger(value) {
+    var text = String(value || '').trim();
+    if (!/^\d+$/.test(text)) return '';
+    var number = parseInt(text, 10);
+    return number > 0 ? String(number) : '';
+  }
+
+  function normalizeChannel(value) {
+    var channel = String(value || '').trim().toLowerCase();
+    return ['telegram', 'instagram', 'vk', 'direct'].indexOf(channel) !== -1 ? channel : 'direct';
+  }
+
+  function detectDevice() {
+    var userAgent = String(navigator.userAgent || '');
+    var ipadDesktopMode = /Macintosh/i.test(userAgent) && Number(navigator.maxTouchPoints || 0) > 1;
+    var androidTablet = /Android/i.test(userAgent) && !/Mobile/i.test(userAgent);
+    if (/iPad|Tablet/i.test(userAgent) || ipadDesktopMode || androidTablet) return 'tablet';
+    if (/iPhone|iPod|Android|Mobile/i.test(userAgent)) return 'mobile';
+    return 'desktop';
+  }
+
+  function makeEventId() {
+    try {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+      }
+    } catch (error) {}
+    return 'visit-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+  }
+
+  function trackVisit() {
+    var params;
+    try {
+      params = new URLSearchParams(window.location.search || '');
+    } catch (error) {
+      return;
+    }
+
+    var postId = positiveInteger(params.get('post'));
+    var contentId = positiveInteger(params.get('content'));
+    var rawChannel = String(params.get('channel') || '').trim();
+
+    if (!postId && !contentId) return;
+    if (!rawChannel) return;
+
+    var channel = normalizeChannel(rawChannel);
+    var publicationUrl = '';
+    if (channel === 'telegram' && postId) {
+      publicationUrl = 'https://t.me/samuray_tours/' + postId;
+    }
+
+    var payload = {
+      eventType: 'content_visit',
+      eventId: makeEventId(),
+      post: postId,
+      content: contentId,
+      channel: channel,
+      publicationUrl: publicationUrl,
+      tour: String(params.get('tour') || '').trim(),
+      pageUrl: window.location.href,
+      referrer: document.referrer || '',
+      device: detectDevice(),
+      platform: String(navigator.platform || ''),
+      language: String(navigator.language || ''),
+      screen: window.screen ? String(window.screen.width) + 'x' + String(window.screen.height) : '',
+      viewport: String(window.innerWidth || '') + 'x' + String(window.innerHeight || ''),
+      clientTimezone: '',
+      clientTimestamp: new Date().toISOString()
+    };
+
+    try {
+      payload.clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    } catch (error) {}
+
+    var query = [];
+    Object.keys(payload).forEach(function (key) {
+      query.push(encodeURIComponent(key) + '=' + encodeURIComponent(payload[key]));
+    });
+
+    var beacon = new Image(1, 1);
+    beacon.referrerPolicy = 'no-referrer';
+    beacon.src = endpoint + '?' + query.join('&');
+    window.__samurayContentVisitBeacon = beacon;
+  }
+
+  trackVisit();
+})();
+</script>
