@@ -154,6 +154,7 @@ export default {
         if (key === 'debug') return;
         if (key.startsWith('geo')) return;
         if (key === 'sourceUrl') return;
+        if (key === 'cloudflareRayId') return;
         target.searchParams.set(key, cleanText(value, 2000));
       });
 
@@ -179,6 +180,7 @@ export default {
       setIfPresent(target.searchParams, 'geoAsn', cf.asn, 50);
       setIfPresent(target.searchParams, 'geoAsOrganization', cf.asOrganization, 500);
       setIfPresent(target.searchParams, 'geoColo', cf.colo, 20);
+      setIfPresent(target.searchParams, 'cloudflareRayId', request.headers.get('CF-Ray'), 100);
 
       const upstreamResponse = await fetch(target.toString(), {
         method: 'GET',
