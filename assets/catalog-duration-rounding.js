@@ -13,6 +13,8 @@
     "family": "Полный день"
   };
 
+  var timers = [];
+
   function catalog(){
     return window.SAMURAY_TOUR_CATALOG || {};
   }
@@ -49,16 +51,16 @@
     grid.querySelectorAll(".card").forEach(function(card){
       var id = cardId(card);
       if(!rounded[id]) return;
-
       var meta = card.querySelector(".meta");
       if(!meta) return;
-
       var expected = publicLabel(id);
       var spans = meta.querySelectorAll("span");
       if(spans.length){
         if(spans[0].textContent !== expected) spans[0].textContent = expected;
-        spans[0].style.display = "";
-        for(var i = 1; i < spans.length; i++) spans[i].style.display = "none";
+        if(spans[0].style.display !== "") spans[0].style.display = "";
+        for(var i = 1; i < spans.length; i++){
+          if(spans[i].style.display !== "none") spans[i].style.display = "none";
+        }
       }else if(meta.textContent.trim() !== expected){
         meta.textContent = expected;
       }
@@ -94,18 +96,15 @@
   }
 
   function schedule(){
-    [0, 40, 120, 280].forEach(function(delay){
-      setTimeout(patch, delay);
+    timers.forEach(clearTimeout);
+    timers = [0, 60, 180, 420].map(function(delay){
+      return setTimeout(patch, delay);
     });
   }
 
   addEventListener("click", schedule, true);
   addEventListener("popstate", schedule);
-
-  var grid = document.getElementById("grid");
-  var modal = document.getElementById("modalContent");
-  if(grid) new MutationObserver(schedule).observe(grid, {childList:true, subtree:true});
-  if(modal) new MutationObserver(schedule).observe(modal, {childList:true, subtree:true});
+  addEventListener("pageshow", schedule);
 
   patch();
   schedule();
