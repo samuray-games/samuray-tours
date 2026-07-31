@@ -3,7 +3,19 @@
   if (window.__samurayContentVisitTracked) return;
   window.__samurayContentVisitTracked = true;
 
-  var endpoint = 'https://script.google.com/macros/s/AKfycbztCYRPUfjdHesTP0hDl9WEwP_Uapj31sLkYH8mO89qvREswQ_5n5Ccv8rP2he66bPiHA/exec';
+  var fallbackEndpoint = 'https://script.google.com/macros/s/AKfycbztCYRPUfjdHesTP0hDl9WEwP_Uapj31sLkYH8mO89qvREswQ_5n5Ccv8rP2he66bPiHA/exec';
+
+  function resolveEndpoint() {
+    var configured = '';
+    try {
+      configured = String(window.SAMURAY_CONTENT_VISIT_ENDPOINT || '').trim();
+      if (!configured) {
+        var meta = document.querySelector('meta[name="samuray-content-visit-endpoint"]');
+        configured = meta ? String(meta.getAttribute('content') || '').trim() : '';
+      }
+    } catch (error) {}
+    return /^https:\/\//i.test(configured) ? configured : fallbackEndpoint;
+  }
 
   function positiveInteger(value) {
     var text = String(value || '').trim();
@@ -14,7 +26,21 @@
 
   function normalizeChannel(value) {
     var channel = String(value || '').trim().toLowerCase();
-    return ['telegram', 'instagram', 'vk', 'direct'].indexOf(channel) !== -1 ? channel : 'direct';
+    var aliases = {
+      tg: 'telegram',
+      telegram: 'telegram',
+      ig: 'instagram',
+      instagram: 'instagram',
+      vk: 'vk',
+      googlemaps: 'googlemaps',
+      'google-maps': 'googlemaps',
+      google_maps: 'googlemaps',
+      tripster: 'tripster',
+      airbnb: 'airbnb',
+      viator: 'viator',
+      direct: 'direct'
+    };
+    return aliases[channel] || 'direct';
   }
 
   function detectDevice() {
@@ -24,6 +50,43 @@
     if (/iPad|Tablet/i.test(userAgent) || ipadDesktopMode || androidTablet) return 'tablet';
     if (/iPhone|iPod|Android|Mobile/i.test(userAgent)) return 'mobile';
     return 'desktop';
+  }
+
+  function detectBrowser() {
+    var ua = String(navigator.userAgent || '');
+    if (/Edg\//i.test(ua)) return 'Microsoft Edge';
+    if (/OPR\//i.test(ua)) return 'Opera';
+    if (/SamsungBrowser\//i.test(ua)) return 'Samsung Internet';
+    if (/Firefox\//i.test(ua)) return 'Firefox';
+    if (/CriOS\//i.test(ua)) return 'Chrome iOS';
+    if (/FxiOS\//i.test(ua)) return 'Firefox iOS';
+    if (/Chrome\//i.test(ua)) return 'Chrome';
+    if (/Safari\//i.test(ua)) return 'Safari';
+    return '';
+  }
+
+  function detectOs() {
+    var ua = String(navigator.userAgent || '');
+    var platform = String(navigator.platform || '');
+    if (/iPad|iPhone|iPod/i.test(ua)) return 'iOS';
+    if (/Macintosh/i.test(ua) && Number(navigator.maxTouchPoints || 0) > 1) return 'iPadOS';
+    if (/Android/i.test(ua)) return 'Android';
+    if (/Windows/i.test(ua) || /Win/i.test(platform)) return 'Windows';
+    if (/CrOS/i.test(ua)) return 'ChromeOS';
+    if (/Mac/i.test(platform) || /Macintosh/i.test(ua)) return 'macOS';
+    if (/Linux/i.test(platform) || /Linux/i.test(ua)) return 'Linux';
+    return '';
+  }
+
+  function networkProfile() {
+    var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!connection) return '';
+    var parts = [];
+    if (connection.effectiveType) parts.push(String(connection.effectiveType));
+    if (typeof connection.downlink === 'number') parts.push(String(connection.downlink) + ' Mbps');
+    if (typeof connection.rtt === 'number') parts.push(String(connection.rtt) + ' ms');
+    if (connection.saveData) parts.push('save-data');
+    return parts.join(' | ');
   }
 
   function makeEventId() {
@@ -56,6 +119,14 @@
       publicationUrl = 'https://t.me/samuray_tours/' + postId;
     }
 
+    var endpoint = resolveEndpoint();
+    var userAgentDataPlatform = '';
+    try {
+      userAgentDataPlatform = navigator.userAgentData && navigator.userAgentData.platform
+        ? String(navigator.userAgentData.platform)
+        : '';
+    } catch (error) {}
+
     var payload = {
       eventType: 'content_visit',
       eventId: makeEventId(),
@@ -65,12 +136,24 @@
       publicationUrl: publicationUrl,
       tour: String(params.get('tour') || '').trim(),
       pageUrl: window.location.href,
+      catalogUrl: window.location.origin + window.location.pathname,
       referrer: document.referrer || '',
       device: detectDevice(),
-      platform: String(navigator.platform || ''),
+      platform: userAgentDataPlatform || String(navigator.platform || ''),
+      os: detectOs(),
+      browser: detectBrowser(),
+      userAgent: String(navigator.userAgent || ''),
       language: String(navigator.language || ''),
+      languages: navigator.languages ? Array.prototype.join.call(navigator.languages, ', ') : '',
       screen: window.screen ? String(window.screen.width) + 'x' + String(window.screen.height) : '',
       viewport: String(window.innerWidth || '') + 'x' + String(window.innerHeight || ''),
+      pixelRatio: Number(window.devicePixelRatio || 1),
+      colorDepth: window.screen ? Number(window.screen.colorDepth || 0) : 0,
+      touchPoints: Number(navigator.maxTouchPoints || 0),
+      hardwareConcurrency: Number(navigator.hardwareConcurrency || 0),
+      deviceMemory: Number(navigator.deviceMemory || 0),
+      networkProfile: networkProfile(),
+      dnt: String(navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack || ''),
       clientTimezone: '',
       clientTimestamp: new Date().toISOString()
     };
@@ -81,12 +164,14 @@
 
     var query = [];
     Object.keys(payload).forEach(function (key) {
-      query.push(encodeURIComponent(key) + '=' + encodeURIComponent(payload[key]));
+      var value = payload[key];
+      if (value === '' || value == null) return;
+      query.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
     });
 
     var beacon = new Image(1, 1);
     beacon.referrerPolicy = 'no-referrer';
-    beacon.src = endpoint + '?' + query.join('&');
+    beacon.src = endpoint + (endpoint.indexOf('?') === -1 ? '?' : '&') + query.join('&');
     window.__samurayContentVisitBeacon = beacon;
   }
 
