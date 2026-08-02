@@ -2,6 +2,7 @@ const CONTENT_VISIT_NOTION_VERSION_ = '2026-03-11';
 const CONTENT_VISIT_CONTENT_SOURCE_FALLBACK_ = '28d6d74c-b01d-4a5a-8f32-cbcdb22efcfa';
 const CONTENT_VISIT_METRICS_SOURCE_FALLBACK_ = 'ee1f58dd-ae30-4968-a43a-a60344e1ce63';
 const CONTENT_VISIT_EVENTS_SOURCE_FALLBACK_ = '2875a5b5-5e0d-46fd-9960-413faecdb924';
+const CONTENT_VISIT_ROUTES_SOURCE_FALLBACK_ = '3242a1d2-b113-46a3-abe5-942bed2a94d2';
 const CONTENT_VISIT_TIMEZONE_ = 'Asia/Tokyo';
 
 function handleContentVisitGet_(e) {
@@ -193,6 +194,7 @@ function recordContentVisit_(params) {
   const contentSourceId = contentVisitScriptProperty_('NOTION_CONTENT_DATA_SOURCE_ID') || CONTENT_VISIT_CONTENT_SOURCE_FALLBACK_;
   const metricsSourceId = contentVisitScriptProperty_('NOTION_METRICS_DATA_SOURCE_ID') || CONTENT_VISIT_METRICS_SOURCE_FALLBACK_;
   const eventsSourceId = contentVisitScriptProperty_('NOTION_CLICK_EVENTS_DATA_SOURCE_ID') || CONTENT_VISIT_EVENTS_SOURCE_FALLBACK_;
+  const routesSourceId = contentVisitScriptProperty_('NOTION_ROUTES_DATA_SOURCE_ID') || CONTENT_VISIT_ROUTES_SOURCE_FALLBACK_;
   if (!token) throw new Error('Set NOTION_TOKEN in Script Properties');
 
   const lock = LockService.getScriptLock();
@@ -202,6 +204,13 @@ function recordContentVisit_(params) {
     if (contentId) {
       contentPage = findContentVisitContentPage_(token, contentSourceId, contentId);
     }
+    const routePage = resolveContentVisitRoutePage_(
+      token,
+      routesSourceId,
+      tour,
+      tourTitle,
+      contentPage
+    );
 
     let metricPage = null;
     let total = 0;
@@ -251,6 +260,7 @@ function recordContentVisit_(params) {
           nowDate: nowDate,
           testEvent: testEvent,
           contentPage: contentPage,
+          routePage: routePage,
           metricPage: metricPage,
         })
       );
@@ -281,6 +291,8 @@ function recordContentVisit_(params) {
       eventUrl: eventPage && eventPage.url ? eventPage.url : null,
       eventError: eventError,
       contentRelationMatched: Boolean(contentPage && contentPage.id),
+      routePageId: routePage && routePage.id ? routePage.id : null,
+      routeTitle: routePage && routePage.title ? routePage.title : null,
     };
   } finally {
     lock.releaseLock();
@@ -362,6 +374,7 @@ function buildContentVisitEventProperties_(context) {
   const clientTimestamp = contentVisitIsoDate_(params.clientTimestamp);
   if (clientTimestamp) properties['Время клиента'] = { date: { start: clientTimestamp } };
   if (context.contentPage && context.contentPage.id) properties['Контент'] = { relation: [{ id: context.contentPage.id }] };
+  if (context.routePage && context.routePage.id) properties['Название тура из контента'] = { relation: [{ id: context.routePage.id }] };
   if (context.metricPage && context.metricPage.id) properties['Сводная метрика'] = { relation: [{ id: context.metricPage.id }] };
   if (context.contentId) properties['CT номер'] = { number: context.contentId };
   if (context.postId) properties['Номер публикации'] = { number: context.postId };
@@ -457,6 +470,26 @@ function findContentVisitContentPage_(token, dataSourceId, contentId) {
     },
   });
   return result.results && result.results.length === 1 ? result.results[0] : null;
+}
+
+function resolveContentVisitRoutePage_(token, routesSourceId, tour, tourTitle, contentPage) {
+  const contentProperties = contentPage && contentPage.properties ? contentPage.properties : {};
+  const contentRouteProperty = contentProperties['Маршруты'] || contentProperties['Маршрут'];
+  const contentRoutes = contentRouteProperty && contentRouteProperty.relation
+    ? contentRouteProperty.relation
+    : [];
+  if (contentRoutes.length === 1 && contentRoutes[0].id) {
+    return { id: contentRoutes[0].id, title: null, matched: true };
+  }
+  if (contentRoutes.length > 1) {
+    throw new Error('Content visit route relation is ambiguous');
+  }
+
+  const resolved = findRoutePage_(token, routesSourceId, 'Маршрут', tourTitle || contentVisitTourTitle_(tour));
+  if (resolved && resolved.ambiguous) {
+    throw new Error('Tour route match is ambiguous');
+  }
+  return resolved && resolved.id ? resolved : null;
 }
 
 function findContentVisitMetricPage_(token, dataSourceId, metricTitle) {
