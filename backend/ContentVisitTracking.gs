@@ -35,6 +35,7 @@ function TEST_CONTENT_VISIT_WRITE() {
     channel: 'telegram',
     publicationUrl: 'https://t.me/samuray_tours/135',
     tour: '3d',
+    tourTitle: '3D Токио - Мэйдзи Дзингу, Харадзюку, Сибуя',
     pageUrl: 'https://samuray-games.github.io/samuray-tours/?tour=3d&post=135&channel=telegram',
     catalogUrl: 'https://samuray-games.github.io/samuray-tours/',
     referrer: 'https://t.me/samuray_tours/135',
@@ -69,6 +70,7 @@ function TEST_CONTENT_VISIT_DETAILED_WRITE() {
     content: 311,
     channel: 'telegram',
     tour: '3d',
+    tourTitle: '3D Токио - Мэйдзи Дзингу, Харадзюку, Сибуя',
     pageUrl: 'https://samuray-games.github.io/samuray-tours/?tour=3d&content=311&channel=telegram',
     catalogUrl: 'https://samuray-games.github.io/samuray-tours/',
     referrer: 'https://t.me/samuray_tours',
@@ -110,6 +112,56 @@ function TEST_CONTENT_VISIT_DETAILED_WRITE() {
   return result;
 }
 
+function TEST_CONTENT_VISIT_FAMILY_WRITE() {
+  const result = recordContentVisit_({
+    eventType: 'content_visit',
+    eventId: 'manual-family-' + Utilities.getUuid(),
+    testEvent: '1',
+    content: 312,
+    channel: 'telegram',
+    tour: 'family',
+    tourTitle: 'Токио для семей с детьми',
+    pageUrl: 'https://samuray-games.github.io/samuray-tours/?tour=family&content=312&channel=telegram',
+    catalogUrl: 'https://samuray-games.github.io/samuray-tours/',
+    referrer: 'https://t.me/samuray_tours',
+    device: 'desktop',
+    platform: 'Google Apps Script',
+    os: 'Apps Script test',
+    browser: 'Apps Script test',
+    userAgent: 'Apps Script manual test family',
+    language: 'ru',
+    languages: 'ru, en, ja',
+    screen: '1440x900',
+    viewport: '1200x800',
+    pixelRatio: 2,
+    colorDepth: 24,
+    touchPoints: 0,
+    hardwareConcurrency: 8,
+    deviceMemory: 8,
+    networkProfile: 'test',
+    dnt: '1',
+    clientTimezone: CONTENT_VISIT_TIMEZONE_,
+    clientTimestamp: new Date().toISOString(),
+    geoCountry: 'Япония',
+    geoCountryCode: 'JP',
+    geoContinent: 'Азия',
+    geoRegion: 'Tokyo',
+    geoRegionCode: '13',
+    geoCity: 'Tokyo',
+    geoPostalCode: '100-0001',
+    geoTimezone: 'Asia/Tokyo',
+    geoLatitude: 35.6895,
+    geoLongitude: 139.6917,
+    geoAsn: 2516,
+    geoAsOrganization: 'KDDI CORPORATION',
+    geoColo: 'NRT',
+    cloudflareRayId: 'manual-test-family',
+    sourceUrl: 'https://example.workers.dev/',
+  });
+  console.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
 function recordContentVisit_(params) {
   const eventId = contentVisitText_(params && params.eventId) || Utilities.getUuid();
   const cache = CacheService.getScriptCache();
@@ -124,6 +176,7 @@ function recordContentVisit_(params) {
   const contentId = contentVisitPositiveInteger_(params && params.content);
   const testEvent = contentVisitBoolean_(params && params.testEvent);
   const tour = contentVisitText_(params && params.tour).slice(0, 200);
+  const tourTitle = contentVisitText_(params && params.tourTitle).slice(0, 2000) || contentVisitTourTitle_(tour);
   const pageUrl = contentVisitSafeUrl_(params && params.pageUrl);
   const publicationUrl = normalizeContentVisitPublicationUrl_(params, channel, postId);
   const device = normalizeContentVisitDevice_(params && params.device);
@@ -162,6 +215,7 @@ function recordContentVisit_(params) {
         channelLabel: channelLabel,
         postId: postId,
         tour: tour,
+        tourTitle: tourTitle,
         pageUrl: pageUrl,
         publicationUrl: publicationUrl,
         device: device,
@@ -189,6 +243,7 @@ function recordContentVisit_(params) {
           channelLabel: channelLabel,
           device: device,
           tour: tour,
+          tourTitle: tourTitle,
           pageUrl: pageUrl,
           publicationUrl: publicationUrl,
           date: date,
@@ -250,10 +305,8 @@ function upsertContentVisitMetric_(context) {
     properties[deviceProperty] = { number: deviceTotal };
     if (context.postId) properties['Номер публикации'] = { number: context.postId };
     if (context.publicationUrl) properties['Ссылка публикации'] = { url: context.publicationUrl };
-    if (context.tour) {
-      properties['Код тура'] = contentVisitRichText_(context.tour);
-      properties['Полное название тура'] = contentVisitRichText_(contentVisitTourTitle_(context.tour));
-    }
+    if (context.tour) properties['Код тура'] = contentVisitRichText_(context.tour);
+    if (context.tourTitle) properties['Полное название тура'] = contentVisitRichText_(context.tourTitle);
     if (context.pageUrl) properties['Целевая ссылка'] = { url: context.pageUrl };
     if (context.contentPage && context.contentPage.id) properties['Контент'] = { relation: [{ id: context.contentPage.id }] };
     metricPage = updateContentVisitMetricPage_(context.token, existing.id, properties);
@@ -271,10 +324,8 @@ function upsertContentVisitMetric_(context) {
     };
     if (context.postId) properties['Номер публикации'] = { number: context.postId };
     if (context.publicationUrl) properties['Ссылка публикации'] = { url: context.publicationUrl };
-    if (context.tour) {
-      properties['Код тура'] = contentVisitRichText_(context.tour);
-      properties['Полное название тура'] = contentVisitRichText_(contentVisitTourTitle_(context.tour));
-    }
+    if (context.tour) properties['Код тура'] = contentVisitRichText_(context.tour);
+    if (context.tourTitle) properties['Полное название тура'] = contentVisitRichText_(context.tourTitle);
     if (context.pageUrl) properties['Целевая ссылка'] = { url: context.pageUrl };
     if (context.contentPage && context.contentPage.id) properties['Контент'] = { relation: [{ id: context.contentPage.id }] };
     metricPage = createContentVisitMetricPage_(context.token, context.metricsSourceId, properties);
@@ -314,10 +365,8 @@ function buildContentVisitEventProperties_(context) {
   if (context.metricPage && context.metricPage.id) properties['Сводная метрика'] = { relation: [{ id: context.metricPage.id }] };
   if (context.contentId) properties['CT номер'] = { number: context.contentId };
   if (context.postId) properties['Номер публикации'] = { number: context.postId };
-  if (context.tour) {
-    properties['Код тура'] = contentVisitRichText_(context.tour);
-    properties['Полное название тура'] = contentVisitRichText_(contentVisitTourTitle_(context.tour));
-  }
+  if (context.tour) properties['Код тура'] = contentVisitRichText_(context.tour);
+  if (context.tourTitle) properties['Полное название тура'] = contentVisitRichText_(context.tourTitle);
 
   contentVisitSetRichText_(properties, 'Платформа', params.platform);
   contentVisitSetRichText_(properties, 'ОС', params.os);
