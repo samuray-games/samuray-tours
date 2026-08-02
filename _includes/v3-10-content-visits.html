@@ -98,6 +98,12 @@
     return 'visit-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
   }
 
+  function resolveTourTitle(tourId) {
+    var catalog = window.SAMURAY_TOUR_CATALOG || {};
+    var item = catalog && tourId ? catalog[tourId] : null;
+    return item && item.title ? String(item.title).trim() : '';
+  }
+
   function sendVisit(endpoint, query) {
     var requestUrl = endpoint + (endpoint.indexOf('?') === -1 ? '?' : '&') + query.join('&');
     try {
@@ -140,6 +146,7 @@
       publicationUrl = 'https://t.me/samuray_tours/' + postId;
     }
 
+    var tourId = String(params.get('tour') || '').trim();
     var userAgentDataPlatform = '';
     try {
       userAgentDataPlatform = navigator.userAgentData && navigator.userAgentData.platform
@@ -154,7 +161,8 @@
       content: contentId,
       channel: channel,
       publicationUrl: publicationUrl,
-      tour: String(params.get('tour') || '').trim(),
+      tour: tourId,
+      tourTitle: resolveTourTitle(tourId),
       utmSource: String(params.get('utm_source') || '').trim(),
       utmMedium: String(params.get('utm_medium') || '').trim(),
       utmCampaign: String(params.get('utm_campaign') || '').trim(),
