@@ -40,6 +40,9 @@ function recordCatalogVisit_(params) {
   const channelLabel = contentVisitChannelLabel_(channel);
   const testEvent = contentVisitBoolean_(params && params.testEvent);
   const tour = contentVisitText_(params && params.tour).slice(0, 200);
+  const tourTitle =
+    contentVisitText_(params && params.tourTitle).slice(0, 2000) ||
+    contentVisitTourTitle_(tour);
   const pageUrl = contentVisitSafeUrl_(params && params.pageUrl);
   const catalogUrl = contentVisitSafeUrl_(params && params.catalogUrl);
   const publicationUrl = contentVisitSafeUrl_(params && params.publicationUrl);
@@ -71,6 +74,7 @@ function recordCatalogVisit_(params) {
         channelLabel: channelLabel,
         postId: null,
         tour: tour,
+        tourTitle: tourTitle,
         pageUrl: catalogUrl || pageUrl,
         publicationUrl: publicationUrl,
         device: device,
@@ -92,6 +96,7 @@ function recordCatalogVisit_(params) {
       channelLabel: channelLabel,
       device: device,
       tour: tour,
+      tourTitle: tourTitle,
       pageUrl: pageUrl,
       publicationUrl: publicationUrl,
       date: date,
@@ -117,6 +122,7 @@ function recordCatalogVisit_(params) {
       channel: channel,
       device: device,
       tour: tour || null,
+      tourTitle: tourTitle || null,
       total: testEvent ? null : total,
       deviceTotal: testEvent ? null : deviceTotal,
       metricTitle: metricTitle,
@@ -146,6 +152,8 @@ function TEST_CATALOG_VISIT_WRITE() {
     eventId: 'manual-catalog-' + Utilities.getUuid(),
     testEvent: '1',
     channel: 'instagram',
+    tour: '3d',
+    tourTitle: '3D Токио - Мэйдзи Дзингу, Харадзюку, Сибуя',
     utmSource: 'ig',
     utmMedium: 'social',
     utmContent: 'link_in_bio',
@@ -161,6 +169,29 @@ function TEST_CATALOG_VISIT_WRITE() {
     clientTimezone: CONTENT_VISIT_TIMEZONE_,
     clientTimestamp: new Date().toISOString(),
   });
+  console.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function TEST_CATALOG_VISIT_FAMILY_WRITE() {
+  const result = recordCatalogVisit_({
+    eventType: 'catalog_visit',
+    eventId: 'manual-catalog-family-' + Utilities.getUuid(),
+    testEvent: '1',
+    channel: 'telegram',
+    tour: 'family',
+    tourTitle: 'Токио для семей с детьми',
+    pageUrl: 'https://samuray-games.github.io/samuray-tours/?tour=family&channel=telegram',
+    catalogUrl: 'https://samuray-games.github.io/samuray-tours/',
+    device: 'desktop',
+    platform: 'Google Apps Script',
+    os: 'Apps Script test',
+    browser: 'Apps Script test',
+    language: 'ru',
+    clientTimezone: CONTENT_VISIT_TIMEZONE_,
+    clientTimestamp: new Date().toISOString(),
+  });
+
   console.log(JSON.stringify(result, null, 2));
   return result;
 }
