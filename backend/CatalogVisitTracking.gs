@@ -57,6 +57,7 @@ function recordCatalogVisit_(params) {
   const token = contentVisitScriptProperty_('NOTION_TOKEN');
   const metricsSourceId = contentVisitScriptProperty_('NOTION_METRICS_DATA_SOURCE_ID') || CONTENT_VISIT_METRICS_SOURCE_FALLBACK_;
   const eventsSourceId = contentVisitScriptProperty_('NOTION_CLICK_EVENTS_DATA_SOURCE_ID') || CONTENT_VISIT_EVENTS_SOURCE_FALLBACK_;
+  const routesSourceId = contentVisitScriptProperty_('NOTION_ROUTES_DATA_SOURCE_ID') || CONTENT_VISIT_ROUTES_SOURCE_FALLBACK_;
   if (!token) throw new Error('Set NOTION_TOKEN in Script Properties');
 
   const lock = LockService.getScriptLock();
@@ -65,6 +66,7 @@ function recordCatalogVisit_(params) {
     let metricPage = null;
     let total = 0;
     let deviceTotal = 0;
+    const routePage = resolveContentVisitRoutePage_(token, routesSourceId, tour, tourTitle, null);
 
     if (!testEvent) {
       const aggregateResult = upsertContentVisitMetric_({
@@ -104,6 +106,7 @@ function recordCatalogVisit_(params) {
       nowDate: nowDate,
       testEvent: testEvent,
       contentPage: null,
+      routePage: routePage,
       metricPage: metricPage,
     });
 
@@ -131,6 +134,8 @@ function recordCatalogVisit_(params) {
       eventLogged: Boolean(eventPage && eventPage.id),
       eventPageId: eventPage && eventPage.id ? eventPage.id : null,
       eventUrl: eventPage && eventPage.url ? eventPage.url : null,
+      routePageId: routePage && routePage.id ? routePage.id : null,
+      routeTitle: routePage && routePage.title ? routePage.title : null,
     };
   } finally {
     lock.releaseLock();
