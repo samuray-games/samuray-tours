@@ -322,7 +322,8 @@ function createNotionRecord_(p) {
   setIf_(pageProperties, bookingMap['Платформа / номер'], richTextProp_(SOURCE_LABEL));
   setIf_(pageProperties, bookingMap['Имя клиента'], richTextProp_(safeText_(p.name)));
   setIf_(pageProperties, bookingMap['Контакт'], richTextProp_(safeText_(p.contactType) + ': ' + safeText_(p.contact)));
-  setIf_(pageProperties, bookingMap['Тур'], richTextProp_(safeText_(p.tourTitle)));
+  setIf_(pageProperties, bookingMap['Код тура'], richTextProp_(safeText_(p.tour)));
+  setIf_(pageProperties, bookingMap['Полное название тура'], richTextProp_(safeText_(p.tourTitle)));
   setIf_(pageProperties, bookingMap['Дата заявки'], dateProp_(new Date().toISOString().slice(0, 10)));
   setIf_(pageProperties, bookingMap['Интересы'], richTextProp_((p.interests || []).join(', ')));
 

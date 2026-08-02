@@ -250,7 +250,10 @@ function upsertContentVisitMetric_(context) {
     properties[deviceProperty] = { number: deviceTotal };
     if (context.postId) properties['Номер публикации'] = { number: context.postId };
     if (context.publicationUrl) properties['Ссылка публикации'] = { url: context.publicationUrl };
-    if (context.tour) properties['Тур'] = contentVisitRichText_(contentVisitTourLabel_(context.tour));
+    if (context.tour) {
+      properties['Код тура'] = contentVisitRichText_(context.tour);
+      properties['Полное название тура'] = contentVisitRichText_(contentVisitTourTitle_(context.tour));
+    }
     if (context.pageUrl) properties['Целевая ссылка'] = { url: context.pageUrl };
     if (context.contentPage && context.contentPage.id) properties['Контент'] = { relation: [{ id: context.contentPage.id }] };
     metricPage = updateContentVisitMetricPage_(context.token, existing.id, properties);
@@ -268,7 +271,10 @@ function upsertContentVisitMetric_(context) {
     };
     if (context.postId) properties['Номер публикации'] = { number: context.postId };
     if (context.publicationUrl) properties['Ссылка публикации'] = { url: context.publicationUrl };
-    if (context.tour) properties['Тур'] = contentVisitRichText_(contentVisitTourLabel_(context.tour));
+    if (context.tour) {
+      properties['Код тура'] = contentVisitRichText_(context.tour);
+      properties['Полное название тура'] = contentVisitRichText_(contentVisitTourTitle_(context.tour));
+    }
     if (context.pageUrl) properties['Целевая ссылка'] = { url: context.pageUrl };
     if (context.contentPage && context.contentPage.id) properties['Контент'] = { relation: [{ id: context.contentPage.id }] };
     metricPage = createContentVisitMetricPage_(context.token, context.metricsSourceId, properties);
@@ -308,7 +314,10 @@ function buildContentVisitEventProperties_(context) {
   if (context.metricPage && context.metricPage.id) properties['Сводная метрика'] = { relation: [{ id: context.metricPage.id }] };
   if (context.contentId) properties['CT номер'] = { number: context.contentId };
   if (context.postId) properties['Номер публикации'] = { number: context.postId };
-  if (context.tour) properties['Тур'] = contentVisitRichText_(contentVisitTourLabel_(context.tour));
+  if (context.tour) {
+    properties['Код тура'] = contentVisitRichText_(context.tour);
+    properties['Полное название тура'] = contentVisitRichText_(contentVisitTourTitle_(context.tour));
+  }
 
   contentVisitSetRichText_(properties, 'Платформа', params.platform);
   contentVisitSetRichText_(properties, 'ОС', params.os);
@@ -568,11 +577,16 @@ function buildContentVisitDeviceDescription_(params, device) {
   return parts.join(' | ').slice(0, 500);
 }
 
-function contentVisitTourLabel_(tour) {
+function contentVisitTourTitle_(tour) {
   const labels = {
     '3d': '3D Токио',
   };
-  return labels[tour] ? labels[tour] + ' (' + tour + ')' : tour;
+  return labels[tour] || tour;
+}
+
+function contentVisitTourLabel_(tour) {
+  const title = contentVisitTourTitle_(tour);
+  return title ? title + ' (' + tour + ')' : tour;
 }
 
 function contentVisitSetRichText_(properties, name, value) {
