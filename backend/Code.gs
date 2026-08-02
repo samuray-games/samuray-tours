@@ -25,14 +25,14 @@ const ROUTE_CANONICALS_ = [
   { title: 'Одайба и Токийский залив', aliases: ['Одайба и Токийский залив', 'odaiba'] },
 ];
 
-function doGet() {
-  const params = arguments[0] && arguments[0].parameter ? arguments[0].parameter : {};
+function doGet(e) {
+  const params = e && e.parameter ? e.parameter : {};
   const eventType = String(params.eventType || '').trim();
   if (eventType === 'content_visit') {
-    return handleContentVisitGetGuarded_(arguments[0] || {});
+    return handleContentVisitGetGuarded_(e);
   }
   if (eventType === 'catalog_visit') {
-    return handleCatalogVisitGetGuarded_(arguments[0] || {});
+    return handleCatalogVisitGetGuarded_(e);
   }
   return jsonResponse_({ ok: true, service: 'SamuRay Tours applications' });
 }
