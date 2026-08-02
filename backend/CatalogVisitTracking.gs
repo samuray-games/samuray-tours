@@ -50,7 +50,7 @@ function recordCatalogVisit_(params) {
   const nowDate = new Date();
   const now = nowDate.toISOString();
   const date = Utilities.formatDate(nowDate, CONTENT_VISIT_TIMEZONE_, 'yyyy-MM-dd');
-  const metricTitle = buildContentVisitMetricTitle_(null, null, channelLabel, date);
+  const metricTitle = buildCatalogVisitMetricTitle_(tour, channelLabel, date);
 
   if (!pageUrl) throw new Error('Catalog visit requires pageUrl');
 
@@ -144,6 +144,11 @@ function addCatalogVisitAttributionProperties_(properties, params) {
   contentVisitSetRichText_(properties, 'UTM content', params.utmContent);
   contentVisitSetRichText_(properties, 'UTM term', params.utmTerm);
   contentVisitSetRichText_(properties, 'FBCLID', params.fbclid);
+}
+
+function buildCatalogVisitMetricTitle_(tour, channelLabel, date) {
+  const subject = tour ? 'TOUR-' + tour : 'BIO';
+  return subject + ' - ' + channelLabel + ' - ' + date;
 }
 
 function TEST_CATALOG_VISIT_WRITE() {
