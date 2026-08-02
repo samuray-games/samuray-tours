@@ -27,8 +27,12 @@ const ROUTE_CANONICALS_ = [
 
 function doGet() {
   const params = arguments[0] && arguments[0].parameter ? arguments[0].parameter : {};
-  if (params && params.eventType) {
+  const eventType = String(params.eventType || '').trim();
+  if (eventType === 'content_visit') {
     return handleContentVisitGetGuarded_(arguments[0] || {});
+  }
+  if (eventType === 'catalog_visit') {
+    return handleCatalogVisitGetGuarded_(arguments[0] || {});
   }
   return jsonResponse_({ ok: true, service: 'SamuRay Tours applications' });
 }
