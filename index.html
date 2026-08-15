@@ -14,10 +14,17 @@
 {% include v3-12-long-descriptions-managed.html %}
 {% include v3-13-long-description-contrast.html %}
 {% include v3-14-catalog-canonical.html %}
+<script>
+(function(){
+  var catalog=window.SAMURAY_TOUR_CATALOG;
+  if(!catalog) return;
+  if(catalog["3d"]) catalog["3d"].duration="3 часа";
+  if(catalog["akiba"]) catalog["akiba"].duration="3 часа";
+  if(catalog["family"]) catalog["family"].duration="8 часов";
+})();
+</script>
 {% include v3-10-content-visits.html %}
 <link rel="stylesheet" href="{{ '/assets/catalog-poster.css' | relative_url }}">
 <script src="{{ '/assets/catalog-poster.js' | relative_url }}"></script>
 <script src="{{ '/assets/catalog-poster-motif-fixes.js' | relative_url }}"></script>
-<script src="{{ '/assets/catalog-duration-rounding.js' | relative_url }}"></script>
-<script src="{{ '/assets/catalog-mobile-card-types.js' | relative_url }}"></script>
 <style>.success-meta{display:none!important}</style>
