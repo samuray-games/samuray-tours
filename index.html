@@ -17,10 +17,23 @@
 <script>
 (function(){
   var catalog=window.SAMURAY_TOUR_CATALOG;
+  var rounded={"3d":"3 часа","akiba":"3 часа","family":"8 часов"};
   if(!catalog) return;
-  if(catalog["3d"]) catalog["3d"].duration="3 часа";
-  if(catalog["akiba"]) catalog["akiba"].duration="3 часа";
-  if(catalog["family"]) catalog["family"].duration="8 часов";
+
+  Object.keys(rounded).forEach(function(id){
+    var tour=catalog[id];
+    if(!tour) return;
+    tour.duration=rounded[id];
+
+    var card=document.querySelector('.card[data-tour-id="'+id+'"]');
+    if(!card) return;
+    var spans=card.querySelectorAll('.meta span');
+    if(spans[0]) spans[0].textContent=rounded[id];
+    if(spans[1] && tour.badge){
+      spans[1].textContent=tour.badge;
+      spans[1].style.display="";
+    }
+  });
 })();
 </script>
 {% include v3-10-content-visits.html %}
