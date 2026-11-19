@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/vendor-tour-photos.yml'
+      - 'scripts/fetch_tour_photos.py'
 
 permissions:
   contents: write
