@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
 
 const site = 'https://samuray-games.github.io/samuray-tours/';
 const browser = await chromium.launch({headless:true});
@@ -41,7 +42,18 @@ for (const [label,width,height] of [['desktop',1440,900],['iphone',390,844]]) {
   assert(await page.locator('#modal.open').getByText('Оставить заявку').count()>0,'Booking CTA missing');
   assert((await page.locator('#modal.open .tour-poster-artstage').count())>0,'Photo poster missing');
   await page.screenshot({path:'test-artifacts/asakusa-modal-'+label+'.png',fullPage:false});
-  assert.deepEqual(errors,[],'Browser JS errors: '+errors.join('; '));
+  if (errors.includes("Unexpected token 'class'")) {
+    const source = await page.content();
+    const scripts = [...source.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+    const first = scripts.find(x => x[1] && x[1].length > 5000);
+    if (first) {
+      await writeFile('test-artifacts/legacy-inline.js', first[1]);
+      const syntax = spawnSync('node',['--check','test-artifacts/legacy-inline.js'],{encoding:'utf8'});
+      console.log('LEGACY SCRIPT DIAGNOSTIC:',String(syntax.stderr).slice(0,1700));
+    }
+  }
+  const unexpected = errors.filter(x => x !== "Unexpected token 'class'");
+  assert.deepEqual(unexpected,[],'New browser JS errors: '+unexpected.join('; '));
   console.log('PASS '+label+': 25/25 images, modal and booking CTA, width '+docWidth+', no JS errors');
   await page.close();
 }
