@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/catalog-photo-check.yml'
+      - 'scripts/smoke_catalog_photo.mjs'
 
 permissions:
   contents: read
