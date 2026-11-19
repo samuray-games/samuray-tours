@@ -1,0 +1,31 @@
+name: Catalog photography smoke test
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/catalog-photo-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Verify cards, photos, booking CTA and iPhone layout
+        run: node scripts/smoke_catalog_photo.mjs
+      - name: Upload review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: samuray-catalog-visual-check
+          path: test-artifacts/
+          if-no-files-found: ignore
