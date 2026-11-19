@@ -12,7 +12,15 @@ for (const [label,width,height] of [['desktop',1440,900],['iphone',390,844]]) {
   await page.goto(site,{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>window.SAMURAY_PHOTO_LAYER && window.SAMURAY_PHOTO_LAYER.tourCount===25,{timeout:60000});
   await page.waitForSelector('#grid .card[data-photo-ready]',{timeout:30000});
-  await page.waitForTimeout(3000);
+  await page.evaluate(() => {
+    document.querySelectorAll('#grid .card[data-photo-ready] .tour-photo-open img')
+      .forEach(img => { img.loading = 'eager'; });
+  });
+  await page.waitForFunction(() => Array.from(
+    document.querySelectorAll('#grid .card[data-photo-ready] .tour-photo-open img')
+  ).length === 25 && Array.from(
+    document.querySelectorAll('#grid .card[data-photo-ready] .tour-photo-open img')
+  ).every(img => img.complete && img.naturalWidth > 100), null, {timeout:45000});
   const count = await page.locator('#grid .card[data-photo-ready]').count();
   const withImages = await page.locator('#grid .card[data-photo-ready] .tour-photo-open img').count();
   assert.equal(count,25,'Expected 25 tour cards, found '+count);
