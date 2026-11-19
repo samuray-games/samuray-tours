@@ -44,17 +44,17 @@ for (const [label,width,height] of [['desktop',1440,900],['iphone',390,844]]) {
   await page.screenshot({path:'test-artifacts/asakusa-modal-'+label+'.png',fullPage:false});
   if (errors.includes("Unexpected token 'class'")) {
     const source = await page.content();
-    const scripts = [...source.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
-    const first = scripts.find(x => x[1] && x[1].length > 5000);
+    const scripts = await page.locator('script:not([src])').evaluateAll(nodes => nodes.map(n => n.textContent || ''));
+    const first = scripts.find(x => x.length > 5000);
     if (first) {
-      await writeFile('test-artifacts/legacy-inline.js', first[1]);
+      await writeFile('test-artifacts/legacy-inline.js', first);
       const syntax = spawnSync('node',['--check','test-artifacts/legacy-inline.js'],{encoding:'utf8'});
       console.log('LEGACY SCRIPT DIAGNOSTIC:',String(syntax.stderr).slice(0,1700));
     }
   }
   const unexpected = errors.filter(x => x !== "Unexpected token 'class'");
   assert.deepEqual(unexpected,[],'New browser JS errors: '+unexpected.join('; '));
-  console.log('PASS '+label+': 25/25 images, modal and booking CTA, width '+docWidth+', no JS errors');
+  console.log('PASS '+label+': 25/25 images, modal and booking CTA, width '+docWidth+', no new JS errors');
   await page.close();
 }
 await browser.close();
